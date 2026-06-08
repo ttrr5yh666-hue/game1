@@ -1,0 +1,28 @@
+
+n = [15, 22, 4, 11, 34, 19]
+print(f"Початковий список: {n}")
+
+
+if all(num > 10 for num in n):
+    
+    b = sorted(n) 
+    print(f"yсі числа більші за 10 {b}")
+else:
+    print("yмова не виконана: у списку є числ менші 10")
+
+import random
+
+print("1. Орел/Решка | 2. Переможець зі списку | 3. Числа")
+choice = input("Дія (1-3): ")
+
+if choice == "1":
+    print(f"Результат: {random.choice(['Орел', 'Решка'])}")
+
+elif choice == "2":
+    names = [n.strip() for n in input("Імена через кому: ").split(",")]
+    print(f"🏆 Переможець: {random.choice(names)}")
+
+elif choice == "3":
+    a, b = int(input("Мін: ")), int(input("Макс: "))
+    k = int(input("Кількість: "))
+    print(f"Послідовність: {random.sample(range(a, b + 1), k)}")
