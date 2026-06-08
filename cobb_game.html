@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>КОББ: ЭВОЛЮЦИЯ ЧУВСТВ</title>
+    <title>КОББ: БОЛЬШОЙ ЛАБИРИНТ</title>
     <style>
         body { background-color: #05050a; color: #fff; font-family: 'Courier New', monospace; text-align: center; margin: 0; }
-        canvas { background-color: #020204; border: 4px solid #ff1111; display: block; margin: 20px auto; box-shadow: 0 0 25px #ff0000; }
+        /* Новые увеличенные размеры холста 1000x600 */
+        canvas { background-color: #020204; border: 4px solid #ff1111; display: block; margin: 20px auto; box-shadow: 0 0 30px #ff0000; }
         .ui { font-size: 18px; margin-top: 10px; color: #00ffcc; }
         .server-status { color: #ffaa00; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
         .evolution-status { color: #ff4444; font-weight: bold; font-size: 20px; margin: 10px; min-height: 24px; }
@@ -16,15 +17,16 @@
 </head>
 <body>
 
-    <h1>🧠 КОББ: МУТАЦИЯ ОРГАНОВ ЧУВСТВ</h1>
-    <div class="server-status" id="status">Подключение к серверу...</div>
+    <h1>🧠 КОББ: МУТАЦИЯ В БОЛЬШОМ ЛАБИРИНТЕ</h1>
+    <div class="server-status" id="status">Подключение к серверу Кобба...</div>
     <div class="evolution-status" id="evo-note">Текущая мутация: Загрузка...</div>
     
     <div class="ui">
         Собрано ламп: <span id="score">0</span> | 🌍 МИРОВОЙ IQ КОББА: <span id="cobb-iq">Загрузка...</span>
     </div>
 
-    <canvas id="gameCanvas" width="600" height="400"></canvas>
+    <!-- Холст стал шире и выше: 1000 на 600 пикселей -->
+    <canvas id="gameCanvas" width="1000" height="600"></canvas>
     <br>
     <a href="index.html" class="back-btn">← Меню</a>
 
@@ -42,27 +44,33 @@
 
         const DB_URL = "https://kvdb.io";
 
-        let player = { x: 40, y: 40, size: 32, speed: 4 };
+        let player = { x: 50, y: 50, size: 30, speed: 4 };
         
-        // СДЕЛАЛИ МЕДЛЕННЕЕ: Базовая скорость теперь всего 0.8 (была 1.8)
-        let cobb = { x: 520, y: 320, size: 24, speed: 0.8 }; 
-        let coal = { x: 300, y: 200, size: 10 };
+        // Начальная скорость Кобба уменьшена до 0.95 для лучшего контроля баланса
+        let cobb = { x: 900, y: 500, size: 24, speed: 0.95, dirX: 0, dirY: 1 }; 
+        let coal = { x: 500, y: 300, size: 10 };
         let score = 0;
         let gameOver = true; 
         let keys = {};
 
         const tileSize = 40;
+        // НОВАЯ ОГРОМНАЯ КАРТА: 25 ячеек в ширину, 15 ячеек в высоту (1000x600 пикселей)
         const map = [
-           [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-           [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
-           [1,0,1,0,1,0,1,1,1,0,1,0,1,0,1],
-           [1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
-           [1,0,1,1,1,1,0,1,0,1,1,1,1,0,1],
-           [1,0,0,0,0,1,0,1,0,1,0,0,0,0,1],
-           [1,0,1,0,0,0,0,1,0,0,0,0,1,0,1],
-           [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
-           [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-           [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+            [1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1],
+            [1,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,1],
+            [1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1],
+            [1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1],
+            [1,1,1,1,0,0,1,0,1,0,1,1,0,1,1,0,1,0,1,0,0,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,0,0,1,0,1,0,1,1,1,1,1,0,1,0,1,0,0,1,1,1,1],
+            [1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1],
+            [1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1],
+            [1,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,1],
+            [1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1],
+            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
         window.addEventListener("keydown", (e) => keys[e.code] = true);
@@ -70,27 +78,26 @@
 
         async function loadGlobalCobb() {
             try {
-                document.getElementById("status").textContent = "📡 Загрузка разума Кобба...";
+                document.getElementById("status").textContent = "📡 Синхронизация глобального разума Кобба...";
                 let response = await fetch(DB_URL);
                 if (response.ok) {
                     let data = await response.json();
-                    // Ограничиваем начальную скорость из облака, чтобы он не летал со старта
-                    cobb.speed = Math.min(data.speed || 0.8, 1.2);
+                    cobb.speed = Math.min(data.speed || 0.95, 1.3);
                     let currentIQ = Math.floor(data.iq || 120);
                     
                     document.getElementById("cobb-iq").textContent = currentIQ;
-                    document.getElementById("status").textContent = "✅ Данные мирового разума синхронизированы!";
+                    document.getElementById("status").textContent = "✅ Мировой ИИ Кобба успешно загружен!";
                     
                     if (currentIQ >= 1000) {
                         triggerUltimateTakeover(currentIQ, cobb.speed);
                         return;
                     }
                 } else {
-                    await saveGlobalCobb(0.8, 120);
+                    await saveGlobalCobb(0.95, 120);
                 }
             } catch (err) {
-                document.getElementById("status").textContent = "⚠️ Автономный режим.";
-                cobb.speed = 0.8;
+                document.getElementById("status").textContent = "⚠️ Автономный режим лабиринта.";
+                cobb.speed = 0.95;
                 document.getElementById("cobb-iq").textContent = "120";
             }
             gameOver = false;
@@ -108,13 +115,18 @@
             let right = Math.floor((x + size - 1) / tileSize);
             let top = Math.floor(y / tileSize);
             let bottom = Math.floor((y + size - 1) / tileSize);
+            
+            // Защита от выхода за рамки массива карты
+            if(left < 0 || right >= 25 || top < 0 || bottom >= 15) return true;
+            
             return (map[top][left] === 1 || map[top][right] === 1 || map[bottom][left] === 1 || map[bottom][right] === 1);
         }
         function spawnCoal() {
             let valid = false;
             while(!valid) {
-                coal.x = Math.floor(Math.random() * 13 + 1) * tileSize + 10;
-                coal.y = Math.floor(Math.random() * 8 + 1) * tileSize + 10;
+                // Координаты адаптированы под новые размеры 25x15
+                coal.x = Math.floor(Math.random() * 23 + 1) * tileSize + 10;
+                coal.y = Math.floor(Math.random() * 13 + 1) * tileSize + 10;
                 if (map[Math.floor(coal.y/tileSize)][Math.floor(coal.x/tileSize)] === 0) valid = true;
             }
         }
@@ -135,8 +147,6 @@
             if (gameOver) return;
 
             let nextX = player.x; let nextY = player.y;
-            let isMoving = keys["ArrowUp"] || keys["ArrowDown"] || keys["ArrowLeft"] || keys["ArrowRight"];
-
             if (keys["ArrowUp"]) nextY -= player.speed;
             if (keys["ArrowDown"]) nextY += player.speed;
             if (!checkWallCollision(player.x, nextY, player.size)) player.y = nextY;
@@ -144,85 +154,92 @@
             if (keys["ArrowRight"]) nextX += player.speed;
             if (!checkWallCollision(nextX, player.y, player.size)) player.x = nextX;
 
-            // --- НОВАЯ СИСТЕМА ИИ: ЭВОЛЮЦИЯ ЧУВСТВ С КАЖДОЙ ЛАМПОЙ ---
             let targetX = cobb.x;
             let targetY = cobb.y;
             let note = "";
 
             if (score === 0) {
-                // ЭТАП 0: Кобб слеп и глух. Просто бродит случайными шагами
-                note = "🥚 Кобб слеп. Он хаотично блуждает по лабиринту.";
-                if (Math.random() < 0.02) {
-                    cobb.dirX = (Math.random() - 0.5) * 2;
-                    cobb.dirY = (Math.random() - 0.5) * 2;
+                note = "🥚 Кобб слеп. Он аккуратно блуждает внутри коридоров.";
+                if (Math.random() < 0.015) {
+                    let angle = Math.random() * Math.PI * 2;
+                    cobb.dirX = Math.cos(angle);
+                    cobb.dirY = Math.sin(angle);
                 }
-                targetX += (cobb.dirX || 0) * 20;
-                targetY += (cobb.dirY || 0) * 20;
+                
+                let testX = cobb.x + cobb.dirX * cobb.speed;
+                let testY = cobb.y + cobb.dirY * cobb.speed;
+                
+                // Коббу запрещено вылетать на внешнюю фиолетовую рамку холста
+                if (!checkWallCollision(testX - cobb.size/2, testY - cobb.size/2, cobb.size) && 
+                    testX > 50 && testX < canvas.width - 50 && testY > 50 && testY < canvas.height - 50) {
+                    cobb.x = testX;
+                    cobb.y = testY;
+                } else {
+                    cobb.dirX = -cobb.dirX;
+                    cobb.dirY = -cobb.dirY;
+                }
             } 
             else if (score === 1) {
-                // ЭТАП 1: ЗРЕНИЕ. Кобб идет строго туда, где Нико стоит прямо сейчас
-                note = "👁️ Кобб открыл ГЛАЗА! Теперь он видит, где ты стоишь.";
-                targetX = player.x;
-                targetY = player.y;
+                note = "👁️ Кобб открыл ГЛАЗА! Теперь он видит твоё положение.";
+                targetX = player.x; targetY = player.y;
             } 
             else if (score === 2) {
-                // ЭТАП 2: СЛУХ. Кобб реагирует на бег и шаги (идет на опережение)
-                note = "👂 Кобб развил СЛУХ! Он слышит шаги и идет на перехват.";
+                note = "👂 Кобб развил СЛУХ! Он бежит наперерез шагам.";
                 targetX = player.x; targetY = player.y;
-                if (keys["ArrowLeft"]) targetX -= 60;
-                if (keys["ArrowRight"]) targetX += 60;
-                if (keys["ArrowUp"]) targetY -= 60;
-                if (keys["ArrowDown"]) targetY += 60;
+                if (keys["ArrowLeft"]) targetX -= 80;
+                if (keys["ArrowRight"]) targetX += 80;
+                if (keys["ArrowUp"]) targetY -= 80;
+                if (keys["ArrowDown"]) targetY += 80;
             } 
             else {
-                // ЭТАП 3+: СВЕРХРАЗУМ. Кобб ускоряется и обходит препятствия безупречно
-                note = "⚡ СВЕРХРАЗУМ! Кобб ускоряется от ярости!";
+                note = "⚡ РЕЖИМ СВЕРХРАЗУМА! Кобб в ярости ускоряется!";
                 targetX = player.x; targetY = player.y;
             }
             document.getElementById("evo-note").textContent = note;
 
-            // Расчет шага Кобба к его текущей цели
-            let dx = targetX - cobb.x; let dy = targetY - cobb.y;
-            let stepX = dx !== 0 ? (dx / Math.abs(dx)) * cobb.speed : 0;
-            let stepY = dy !== 0 ? (dy / Math.abs(dy)) * cobb.speed : 0;
+            // Движение по алгоритму обхода стен для уровней мутации 1, 2 и 3
+            if (score > 0) {
+                let dx = targetX - cobb.x; let dy = targetY - cobb.y;
+                let stepX = dx !== 0 ? (dx / Math.abs(dx)) * cobb.speed : 0;
+                let stepY = dy !== 0 ? (dy / Math.abs(dy)) * cobb.speed : 0;
 
-            if (stepX !== 0 && !checkWallCollision(cobb.x + stepX - cobb.size/2, cobb.y - cobb.size/2, cobb.size)) cobb.x += stepX;
-            else if (stepY !== 0) cobb.y += stepY;
-            if (stepY !== 0 && !checkWallCollision(cobb.x - cobb.size/2, cobb.y + stepY - cobb.size/2, cobb.size)) cobb.y += stepY;
-            else if (stepX !== 0) cobb.x += stepX;
+                if (stepX !== 0 && !checkWallCollision(cobb.x + stepX - cobb.size/2, cobb.y - cobb.size/2, cobb.size)) cobb.x += stepX;
+                else if (stepY !== 0) cobb.y += stepY;
+                if (stepY !== 0 && !checkWallCollision(cobb.x - cobb.size/2, cobb.y + stepY - cobb.size/2, cobb.size)) cobb.y += stepY;
+                else if (stepX !== 0) cobb.x += stepX;
+            }
 
-            // Сбор ламп Нико
-            let distToCoal = Math.sqrt(Math.pow((player.x + 16) - coal.x, 2) + Math.pow((player.y + 16) - coal.y, 2));
-            if (distToCoal < 20) {
+            let distToCoal = Math.sqrt(Math.pow((player.x + 15) - coal.x, 2) + Math.pow((player.y + 15) - coal.y, 2));
+            if (distToCoal < 22) {
                 score++;
                 document.getElementById("score").textContent = score;
-                // Небольшое плавное ускорение (на 0.1 вместо 0.25)
-                cobb.speed += 0.1; 
+                cobb.speed += 0.12; 
                 spawnCoal();
             }
 
-            // Столкновение с Коббом
-            let distToCobb = Math.sqrt(Math.pow((player.x + 16) - cobb.x, 2) + Math.pow((player.y + 16) - cobb.y, 2));
+            let distToCobb = Math.sqrt(Math.pow((player.x + 15) - cobb.x, 2) + Math.pow((player.y + 15) - cobb.y, 2));
             if (distToCobb < (player.size/2 + cobb.size/2)) {
                 processCobbVictory();
             }
 
-            // Отрисовка
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Отрисовка обновленного лабиринта
             for(let r=0; r<map.length; r++) {
                 for(let c=0; c<map[r].length; c++) {
-                    if(map[r][c] === 1) { ctx.fillStyle = "#161624"; ctx.fillRect(c*tileSize, r*tileSize, tileSize, tileSize); }
+                    if(map[r][c] === 1) { 
+                        ctx.fillStyle = "#161624"; 
+                        ctx.fillRect(c*tileSize, r*tileSize, tileSize, tileSize); 
+                    }
                 }
             }
             ctx.fillStyle = "#ffcc00"; ctx.beginPath(); ctx.arc(coal.x, coal.y, coal.size, 0, Math.PI * 2); ctx.fill();
             drawNiko(player.x, player.y);
             
-            // Внешний вид Кобба меняется в зависимости от слепоты
             let pulse = 2 * Math.sin(Date.now() / 100);
-            ctx.fillStyle = score === 0 ? "#555" : "#ff2244"; // Серый, пока слеп
+            ctx.fillStyle = score === 0 ? "#555" : "#ff2244"; 
             ctx.beginPath(); ctx.arc(cobb.x, cobb.y, cobb.size + pulse, 0, Math.PI * 2); ctx.fill();
             
-            if (score > 0) { // Глаза прорисовываются только со 2-го этапа
+            if (score > 0) { 
                 ctx.fillStyle = "#000";
                 ctx.fillRect(cobb.x - 6, cobb.y - 6, 4, 8); ctx.fillRect(cobb.x + 2, cobb.y - 6, 4, 8);
             }
@@ -233,12 +250,10 @@
         function processCobbVictory() {
             gameOver = true;
             let currentIQ = parseInt(document.getElementById("cobb-iq").textContent) || 120;
-            
-            // Сервер получает медленную скорость, чтобы другие игроки тоже успевали играть
-            let newGlobalSpeed = Math.min(cobb.speed + (score * 0.02) + 0.05, 1.3); 
-            let newGlobalIQ = currentIQ + (score * 10) + 20; 
+            let newGlobalSpeed = Math.min(cobb.speed + (score * 0.02) + 0.05, 1.4); 
+            let newGlobalIQ = currentIQ + (score * 12) + 20; 
 
-            document.getElementById("status").textContent = "📤 Отправка эволюции в глобальный мозг...";
+            document.getElementById("status").textContent = "📤 Загрузка новой мутации в глобальный мозг Кобба...";
             saveGlobalCobb(newGlobalSpeed, newGlobalIQ);
             triggerUltimateTakeover(newGlobalIQ, newGlobalSpeed);
         }
@@ -276,8 +291,8 @@
 
         function restartGame() {
             document.getElementById("world-takeover").style.display = "none";
-            player = { x: 40, y: 40, size: 32, speed: 4 };
-            cobb = { x: 520, y: 320, size: 24, speed: 0.8 };
+            player = { x: 50, y: 50, size: 30, speed: 4 };
+            cobb = { x: 900, y: 500, size: 24, speed: 0.95, dirX: 0, dirY: 1 };
             score = 0;
             document.getElementById("score").textContent = score;
             loadGlobalCobb(); 
@@ -292,3 +307,4 @@
     </script>
 </body>
 </html>
+
