@@ -64,12 +64,13 @@
     <canvas id="gameCanvas" width="500" height="240"></canvas>
 
     <div class="stats">
-        <div>Тест Шага 1: <span style="color: #ff3366;">Загрузка спрайтов Expie</span></div>
+        <div>Тест Шага 1: <span style="color: #ff3366;">Сборка Expie</span></div>
         <div>Управление: <b>← → (Стрелочки)</b></div>
     </div>
     
-    <div id="log" class="log">> Инициализация конструктора персонажа... Ожидание скриптов движка.</div>
+    <div id="log" class="log">> Инициализация конструктора персонажа...</div>
 </div>
+
 <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
@@ -80,7 +81,7 @@
         logEl.scrollTop = logEl.scrollHeight;
     }
 
-    // Загрузка настоящих картинок Expie из корня сайта
+    // Загрузка твоих картинок
     const sprites = {
         head: new Image(),
         upTorso: new Image(),
@@ -102,7 +103,6 @@
     let loadedCount = 0;
     const totalSprites = Object.keys(sprites).length;
 
-    // Проверка загрузки каждого файла
     for (let key in sprites) {
         sprites[key].onload = () => {
             loadedCount++;
@@ -111,7 +111,7 @@
             }
         };
         sprites[key].onerror = () => {
-            log(`❌ Ошибка загрузки файла: ${sprites[key].src.split('/').pop()}`);
+            log(`❌ Проблема с файлом: ${sprites[key].src.split('/').pop()}`);
         };
     }
 
@@ -125,57 +125,45 @@
     window.addEventListener("keydown", (e) => { keys[e.key] = true; });
     window.addEventListener("keyup", (e) => { keys[e.key] = false; });
 
-    let animTime = 0; // Переменная для анимации движения лап
-</script>
-    // Функция автоматической сборки Expie из отдельных деталек
+    let animTime = 0;
+
     function drawAssembledExpie(x, y) {
-        // Считаем покачивание лап от времени (синусоида)
         let legSwing = Math.sin(animTime * 0.15) * 10;
-        
-        // Если Expie стоит и не двигается, лапы не качаются
         if (!keys["ArrowRight"] && !keys["ArrowLeft"]) {
             legSwing = 0;
         }
 
-        // Начинаем рисовать детали сзади наперед, чтобы они правильно перекрывали друг друга
-
-        // 1. ДЕТАЛЬ: Пушистый хвост (рисуется самым первым, за спиной)
-        if (sprites.tail.complete) {
-            // Хвост немного покачивается в такт ходьбе
+        // Хвост
+        if (sprites.tail.complete && sprites.tail.naturalWidth !== 0) {
             ctx.drawImage(sprites.tail, x - 20, y + 25 + Math.sin(animTime * 0.1) * 3, 25, 25);
         }
 
-        // 2. ДЕТАЛЬ: ЗАДНЯЯ НОГА (Бедро + Голень + Стопа)
+        // Задняя нога
         if (sprites.thigh.complete && sprites.crus.complete && sprites.foot.complete) {
-            let backLegOffset = legSwing; // Качается в одну сторону
+            let backLegOffset = legSwing;
             ctx.drawImage(sprites.thigh, x + 2 + backLegOffset * 0.3, y + 38, 10, 12);
             ctx.drawImage(sprites.crus, x + 2 + backLegOffset * 0.6, y + 48, 8, 12);
             ctx.drawImage(sprites.foot, x + backLegOffset, y + 58, 12, 6);
         }
 
-        // 3. ДЕТАЛЬ: Нижняя часть туловища (Таз / DownTorso)
-        if (sprites.downTorso.complete) {
+        // Таз
+        if (sprites.downTorso.complete && sprites.downTorso.naturalWidth !== 0) {
             ctx.drawImage(sprites.downTorso, x + 2, y + 30, 20, 12);
         }
 
-        // 4. ДЕТАЛЬ: Верхняя часть туловища (Грудь / UpTorso)
-        if (sprites.upTorso.complete) {
+        // Грудь
+        if (sprites.upTorso.complete && sprites.upTorso.naturalWidth !== 0) {
             ctx.drawImage(sprites.upTorso, x, y + 14, 24, 18);
         }
 
-        // 5. ДЕТАЛЬ: Длинная изогнутая шея (крепится к груди)
-        if (sprites.neck.complete) {
-            ctx.drawImage(sprites.neck, x + 6, y, 10, 16);
+        // Башка
+        if (sprites.head.complete && sprites.head.naturalWidth !== 0) {
+            ctx.drawImage(sprites.head, x + 4, y, 20, 14);
         }
 
-        // 6. ДЕТАЛЬ: Башка шлема (ставится на самый верх шеи)
-        if (sprites.head.complete) {
-            ctx.drawImage(sprites.head, x + 4, y - 10, 20, 14);
-        }
-
-        // 7. ДЕТАЛЬ: ПЕРЕДНЯЯ НОГА (рисуется поверх туловища)
+        // Передняя нога
         if (sprites.thigh.complete && sprites.crus.complete && sprites.foot.complete) {
-            let frontLegOffset = -legSwing; // Качается в противоположную сторону
+            let frontLegOffset = -legSwing;
             ctx.drawImage(sprites.thigh, x + 10 + frontLegOffset * 0.3, y + 38, 10, 12);
             ctx.drawImage(sprites.crus, x + 10 + frontLegOffset * 0.6, y + 48, 8, 12);
             ctx.drawImage(sprites.foot, x + 8 + frontLegOffset, y + 58, 12, 6);
@@ -183,32 +171,28 @@
     }
 
     function gameLoop() {
-        // Очищаем экран и заливаем темным фоном шахты
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
         ctx.fillStyle = "#0a0d12";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Рисуем пол под ногами
         ctx.fillStyle = "#2c3540";
         ctx.fillRect(0, 145, canvas.width, 95);
 
-        // Логика перемещения базы Expie
         if (keys["ArrowRight"] && player.x < canvas.width - 40) {
             player.x += player.speed;
-            animTime++; // Крутим счетчик анимации только при ходьбе
+            animTime++;
         }
         if (keys["ArrowLeft"] && player.x > 20) {
             player.x -= player.speed;
             animTime++;
         }
 
-        // Запускаем модульный конструктор сборки
         drawAssembledExpie(player.x, player.y);
 
         requestAnimationFrame(gameLoop);
     }
 
-    // Запуск главного цикла игры
     gameLoop();
 </script>
 </body>
