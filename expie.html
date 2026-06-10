@@ -78,17 +78,13 @@
     let hp = 100;
     let depth = 0;
     const maxDepth = 2000; 
-    let leak = false; // Флаг оранжевого кровотечения
+    let leak = false; 
     let gameOver = false;
     let inventory = { titan: 0, gunpowder: 1, mines: 2 };
 
     const blockSize = 20;
     const topFloorY = 55;
     const bottomFloorY = 135;
-
-    // Загрузка реального пиксельного спрайта Expie
-    const expieImg = new Image();
-    expieImg.src = "https://ibb.co"; // Чистый пиксельный спрайт Expie
 
     // Хранилище для капель оранжевой крови на блоках
     let bloodDrops = [];
@@ -119,9 +115,10 @@
         logEl.scrollTop = logEl.scrollHeight;
     }
 
-    expieImg.onload = function() {
-        log("✅ Спрайт Expie успешно интегрирован в систему!");
-    };
+    // Инициализация лога без ошибок загрузки картинок
+    setTimeout(() => {
+        log("✅ Костюм Expie полностью откалиброван! Ошибки текстур устранены.");
+    }, 500);
 
     let keys = {};
     window.addEventListener("keydown", (e) => { 
@@ -151,7 +148,7 @@
 
         if (hp <= 0 && !gameOver) {
             gameOver = true;
-            log("<b style='color:#ff3333;'>💀 КРИТИЧЕСКИЙ СБОЙ: Жизненные показатели Expie на нуле.</b>");
+            log("<b style='color:#ff3333;'>💀 КРИТИЧЕСКИЙ СБОЙ: Жизненные показатели Expie на нулю.</b>");
         }
     }
 
@@ -215,12 +212,46 @@
         }
     }
 
-    // Рисование капель оранжевой крови на блоках
     function drawBlood(offsetX) {
-        ctx.fillStyle = "#ff6600"; // Яркая оранжевая кровь фурри
+        ctx.fillStyle = "#ff6600"; 
         bloodDrops.forEach(drop => {
             ctx.fillRect(drop.x + offsetX, drop.y, 4, 4);
         });
+    }
+
+    // НОВОЕ: Точная прорисовка Фурри Expie кодом по твоей фотографии
+    function drawFurryExpie(x, y) {
+        // 1. Тонкие лапы (ноги)
+        ctx.fillStyle = "#1e222a";
+        ctx.fillRect(x + 6, y + 42, 3, 13);
+        ctx.fillRect(x + 14, y + 42, 3, 13);
+
+        // 2. БОЛЬШОЙ ПУШИСТЫЙ ХВОСТ сзади (розовато-бежевый, как на фото)
+        ctx.fillStyle = "#e8c3b9";
+        ctx.beginPath();
+        ctx.arc(x - 4, y + 32, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(x - 10, y + 28, 8, 12); // Удлинение хвоста вниз
+
+        // 3. Тёмный торс скафандра
+        ctx.fillStyle = "#2d3542";
+        ctx.fillRect(x + 2, y + 16, 18, 26);
+
+        // 4. ДЛИННАЯ ВЫТЯНУТАЯ ШЕЯ (главная фишка Expie)
+        ctx.fillStyle = "#212731";
+        ctx.fillRect(x + 6, y, 9, 18);
+
+        // 5. Голова шлема с ушками на затылке
+        ctx.fillStyle = "#2d3542";
+        ctx.fillRect(x + 4, y - 6, 15, 12); // Основа головы
+        ctx.fillRect(x + 1, y - 8, 5, 5);   // Острое ушко/нарост сзади
+
+        // 6. СВЕТЯЩИЙСЯ РОЗОВЫЙ ВИЗОР (Глаз)
+        ctx.fillStyle = "#ffb3d1";
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = "#ff3399";
+        ctx.fillRect(x + 12, y - 3, 5, 5); // Сам визор шлема
+        ctx.shadowBlur = 0; // Отключаем свечение для остальных объектов
     }
 
     function gameLoop() {
@@ -244,10 +275,8 @@
             checkCollisions();
         }
 
-        // Логика кровотечения при ходьбе
         if (leak && isMoving && Math.random() < 0.05) {
             hp -= 1;
-            // Оставляем каплю крови на текущем этаже
             let bloodY = (player.currentFloor === "top") ? 106 : 186;
             bloodDrops.push({ x: player.x, y: bloodY + Math.random() * 4 });
             updateUI();
@@ -260,7 +289,6 @@
         if (offsetX > 0) offsetX = 0;
         if (offsetX < canvas.width - (maxDepth + 100)) offsetX = canvas.width - (maxDepth + 100);
 
-        // Рисуем блоки земли и следы оранжевой крови
         drawBlocks(offsetX);
         drawBlood(offsetX);
 
@@ -284,16 +312,8 @@
             ctx.fillText(`Лифт: Впереди в ${left}м →`, 310, 25);
         }
 
-        // Отрисовка реального спрайта Expie
-        if (expieImg.complete && expieImg.naturalWidth !== 0) {
-            ctx.drawImage(expieImg, player.x + offsetX - 5, player.y, player.width + 10, player.height);
-        } else {
-            // Если картинка долго грузится, показываем временный силуэт с розовым глазом
-            ctx.fillStyle = "#252d38";
-            ctx.fillRect(player.x + offsetX, player.y + 15, 16, 40);
-            ctx.fillStyle = "#ff99cc";
-            ctx.fillRect(player.x + offsetX + 10, player.y + 4, 5, 5);
-        }
+        // Рисуем улучшенного фурри Expie кодом
+        drawFurryExpie(player.x + offsetX, player.y);
 
         requestAnimationFrame(gameLoop);
     }
@@ -302,7 +322,7 @@
         if (inventory.titan >= 1) {
             inventory.titan--;
             hp = Math.min(100, hp + 30);
-            leak = false; // Медикаменты останавливают оранжевое кровотечение!
+            leak = false; 
             log("🩹 Раны перевязаны, оранжевое кровотечение успешно остановлено.");
             updateUI();
         } else {
@@ -318,7 +338,7 @@
             log("🛠️ Собрана активная мина-липучка.");
             updateUI();
         } else {
-            log("❌ Недостаточно компонентов.");
+            log("❌ Недостаточно components.");
         }
     }
 
