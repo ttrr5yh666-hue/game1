@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCAV: CASUALTIES UNKNOWN 2D</title>
+    <title>SCAV: CASUALTIES UNKNOWN PLATFORMS</title>
     <style>
         body {
             background-color: #080a0c;
@@ -46,9 +46,9 @@
 <body>
 
 <div class="game-container">
-    <h1>SCAV: CASUALTIES UNKNOWN (2D)</h1>
+    <h1>SCAV: CASUALTIES UNKNOWN (PLATFORMS)</h1>
     
-    <canvas id="gameCanvas" width="500" height="200"></canvas>
+    <canvas id="gameCanvas" width="500" height="240"></canvas>
 
     <div class="stats">
         <div>Метры: <span id="progress">0</span> / 2000м</div>
@@ -59,19 +59,18 @@
     <div class="stats" style="font-size: 12px; color: #8b949e;">
         <div>Титан: <span id="titan">0</span></div>
         <div>Порох: <span id="gunpowder">1</span></div>
-        <div>Ходьба: <b>← → (Стрелочки)</b></div>
+        <div>Управление: <b>← → (Ходьба) | ↑ ↓ (Платформы)</b></div>
     </div>
 
     <div id="bleed-warn" class="warning">⚠️ УТЕЧКА МАСЛА! Движение медленно отнимает HP!</div>
     
-    <div id="log" class="log">Система Expie запущена. Карта ограничена (2000м). Идите направо.</div>
+    <div id="log" class="log">Системы Expie активны. Используйте стрелочку ВНИЗ, чтобы спуститься на нижний ярус.</div>
 
     <div class="actions">
         <button onclick="rechargeBattery()">Сварка (1 тит.)</button>
         <button onclick="craftMine()">Скрафтить мину (1 пор. + 1 тит.)</button>
     </div>
 </div>
-
 <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
@@ -83,23 +82,31 @@
     let gameOver = false;
     let inventory = { titan: 0, gunpowder: 1, mines: 2 };
 
+    const blockSize = 20;
+
+    // Высота ярусов (этажей) для робота
+    const topFloorY = 55;
+    const bottomFloorY = 135;
+
     let player = {
         x: 50,
-        y: 95,
+        y: topFloorY, 
         width: 25,
         height: 55,
-        speed: 4
+        speed: 4,
+        currentFloor: "top"
     };
 
+    // Объекты на карте раскиданы по ярусам (y: "top" или "bottom")
     let gameObjects = [
-        { x: 300, type: "titan", icon: "💎", active: true },
-        { x: 550, type: "glass", icon: "💠", active: true },
-        { x: 800, type: "trap", icon: "💥", active: true },
-        { x: 1100, type: "enemy", icon: "👾", active: true },
-        { x: 1350, type: "titan", icon: "💎", active: true },
-        { x: 1550, type: "trap", icon: "💥", active: true },
-        { x: 1750, type: "enemy", icon: "👾", active: true },
-        { x: maxDepth, type: "exit", icon: "🚪", active: true } 
+        { x: 300, y: "top", type: "titan", icon: "💎", active: true },
+        { x: 550, y: "bottom", type: "glass", icon: "💠", active: true },
+        { x: 800, y: "top", type: "trap", icon: "💥", active: true },
+        { x: 1100, y: "bottom", type: "enemy", icon: "👾", active: true },
+        { x: 1350, y: "top", type: "titan", icon: "💎", active: true },
+        { x: 1550, y: "bottom", type: "trap", icon: "💥", active: true },
+        { x: 1750, y: "top", type: "enemy", icon: "👾", active: true },
+        { x: maxDepth, y: "bottom", type: "exit", icon: "🚪", active: true } 
     ];
 
     const logEl = document.getElementById('log');
@@ -109,7 +116,22 @@
     }
 
     let keys = {};
-    window.addEventListener("keydown", (e) => { keys[e.key] = true; });
+    window.addEventListener("keydown", (e) => { 
+        keys[e.key] = true; 
+        
+        // Логика перемещения между ярусами
+        if (!gameOver) {
+            if (e.key === "ArrowDown" && player.currentFloor === "top") {
+                player.y = bottomFloorY;
+                player.currentFloor = "bottom";
+                log("⬇️ Expie спустился на нижний ярус пещеры.");
+            } else if (e.key === "ArrowUp" && player.currentFloor === "bottom") {
+                player.y = topFloorY;
+                player.currentFloor = "top";
+                log("⬆️ Expie поднялся на верхний ярус.");
+            }
+        }
+    });
     window.addEventListener("keyup", (e) => { keys[e.key] = false; });
 
     function updateUI() {
@@ -128,10 +150,11 @@
 
     function checkCollisions() {
         gameObjects.forEach(obj => {
-            if (obj.active && Math.abs(player.x - obj.x) < 25) {
+            // Проверка столкновения только на одном и том же ярусе
+            if (obj.active && Math.abs(player.x - obj.x) < 25 && player.currentFloor === obj.y) {
                 if (obj.type === "exit") {
                     gameOver = true;
-                    log("<b style='color:#00ff00;'>🎉 МИССИЯ ВЫПОЛНЕНА! Expie успешно эвакуировался через лифт!</b>");
+                    log("<b style='color:#00ff00;'>🎉 МИССИЯ ВЫПОЛНЕНА! Expie успешно добрался до лифта эвакуации!</b>");
                     return;
                 }
 
@@ -145,7 +168,7 @@
                 } else if (obj.type === "trap") {
                     if (inventory.mines > 0) {
                         inventory.mines--;
-                        log("💥 Сработал датчик: Мина-ловушка уничтожена встречным броском липучки!");
+                        log("💥 Датчик: Мина-ловушка уничтожена встречным броском липучки!");
                     } else {
                         hp -= 35; leak = true;
                         log("<b style='color:#ff3333;'>💥 БАБАХ! Наступил на мину! Тяжелые повреждения и утечка масла!</b>");
@@ -164,24 +187,47 @@
         });
     }
 
+    // Рисование блоков
+    function drawBlocks(offsetX) {
+        ctx.fillStyle = "#2c3540"; 
+        ctx.strokeStyle = "#161b22"; 
+        ctx.lineWidth = 1;
+
+        for (let col = 0; col < canvas.width / blockSize + 10; col++) {
+            let blockX = (col * blockSize) + (offsetX % blockSize) - blockSize;
+            
+            // Верхний ярус платформ
+            for (let row = 0; row < 1; row++) {
+                let blockY = 110 + (row * blockSize);
+                ctx.fillRect(blockX, blockY, blockSize, blockSize);
+                ctx.strokeRect(blockX, blockY, blockSize, blockSize);
+            }
+
+            // Нижний ярус земли
+            for (let row = 0; row < 2; row++) {
+                let blockY = 190 + (row * blockSize);
+                ctx.fillRect(blockX, blockY, blockSize, blockSize);
+                ctx.strokeRect(blockX, blockY, blockSize, blockSize);
+            }
+        }
+    }
+
     function drawExpie(x, y) {
-        ctx.fillStyle = "#20252e";
+        ctx.fillStyle = "#1e232b";
         ctx.fillRect(x + 5, y + 40, 3, 15);
         ctx.fillRect(x + 15, y + 40, 3, 15);
         
-        ctx.fillStyle = "#161a22";
+        ctx.fillStyle = "#11151c";
         ctx.fillRect(x - 5, y + 25, 10, 12);
         
-        ctx.fillStyle = "#2a313d";
+        ctx.fillStyle = "#252d38";
         ctx.fillRect(x + 2, y + 15, 16, 26);
-        
         ctx.fillRect(x + 4, y, 10, 16);
         
         ctx.fillStyle = "#ff99cc";
         ctx.shadowBlur = 12;
         ctx.shadowColor = "#ff3399";
         ctx.fillRect(x + 10, y + 4, 5, 5);
-        
         ctx.shadowBlur = 0;
     }
 
@@ -191,12 +237,7 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         ctx.fillStyle = "#0a0d12";
-        ctx.fillRect(0, 0, canvas.width, 150);
-
-        ctx.fillStyle = "#1c2128";
-        ctx.fillRect(0, 150, canvas.width, 50);
-        ctx.fillStyle = "#ff3366"; 
-        ctx.fillRect(0, 150, canvas.width, 2); 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         if (keys["ArrowRight"] && player.x < maxDepth + 40) {
             player.x += player.speed;
@@ -222,13 +263,17 @@
         if (offsetX > 0) offsetX = 0;
         if (offsetX < canvas.width - (maxDepth + 100)) offsetX = canvas.width - (maxDepth + 100);
 
+        drawBlocks(offsetX);
+
         ctx.font = "20px Courier New";
         gameObjects.forEach(obj => {
             if (obj.active) {
-                ctx.fillText(obj.icon, obj.x + offsetX, player.y + 35);
+                let objY = (obj.y === "top") ? topFloorY + 35 : bottomFloorY + 35;
+                ctx.fillText(obj.icon, obj.x + offsetX, objY);
+                
                 if(obj.type === "exit") {
                     ctx.fillStyle = "#00ff00"; 
-                    ctx.fillRect(obj.x + offsetX + 5, player.y - 5, 15, 60);
+                    ctx.fillRect(obj.x + offsetX + 5, objY - 15, 15, 60);
                 }
             }
         });
