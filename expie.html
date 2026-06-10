@@ -64,11 +64,11 @@
     <canvas id="gameCanvas" width="500" height="240"></canvas>
 
     <div class="stats">
-        <div>Режим скафандра: <span id="mode-text" style="color: #00ff00; font-weight: bold;">ХОДЬБА</span></div>
-        <div>Кнопка <b>[ X ]</b>: Упасть / Встать</div>
+        <div>Режим: <span id="mode-text" style="color: #00ff00; font-weight: bold;">ХОДЬБА</span></div>
+        <div>Кнопка <b>[ X ]</b>: Падение / Встать</div>
     </div>
     
-    <div id="log" class="log">> Система стабилизации перезапущена. Нажмите [ X ] для проверки физики падения!</div>
+    <div id="log" class="log">> Стабилизатор скафандра Expie перезагружен. Проверь ходьбу и кнопку X!</div>
 </div>
 <script>
     const canvas = document.getElementById("gameCanvas");
@@ -109,14 +109,11 @@
         isRagdoll: false
     };
 
-    // Смещения и углы поворота для каждой кости в режиме рэгдолла
-    let ragdollOffsets = {
-        head: { dx: 10, dy: -24, angle: 0, va: 0, vy: 0 },
-        tail: { dx: 2, dy: 12, angle: 0, va: 0, vy: 0 },
-        upArm: { dx: 14, dy: -4, angle: 0, va: 0, vy: 0 },
-        downArm: { dx: 18, dy: -4, angle: 0, va: 0, vy: 0 },
-        thighBack: { dx: 4, dy: 10, angle: 0, va: 0, vy: 0 },
-        thighFront: { dx: 8, dy: 10, angle: 0, va: 0, vy: 0 }
+    // Физические смещения деталей для рэгдолла (падения)
+    let ragdoll = {
+        headY: 0, tailY: 0, armBY: 0, armFY: 0, legBY: 0, legFY: 0,
+        headA: 0, tailA: 0, armBA: 0, armFA: 0, legBA: 0, legFA: 0,
+        vy: 0
     };
 
     let keys = {};
@@ -129,24 +126,25 @@
             if (player.isRagdoll) {
                 document.getElementById("mode-text").innerText = "РЭГДОЛЛ";
                 document.getElementById("mode-text").style.color = "#ff3366";
-                log("⚠️ Мышцы скафандра Expie полностью отключены! Тряска суставов.");
+                log("⚠️ Мышцы отключены! Expie рухнул на пол.");
                 
-                // Задаем случайный начальный толчок деталям при падении
-                for (let key in ragdollOffsets) {
-                    ragdollOffsets[key].va = (Math.random() - 0.5) * 0.2;
-                    ragdollOffsets[key].vy = Math.random() * 2;
-                }
+                // Начальный хаотичный разброс костей при ударе
+                ragdoll.vy = 2;
+                ragdoll.headA = 1.2;
+                ragdoll.tailA = -0.6;
+                ragdoll.armBA = 2.1;
+                ragdoll.armFA = -1.5;
+                ragdoll.legBA = 1.4;
+                ragdoll.legFA = -1.2;
             } else {
                 document.getElementById("mode-text").innerText = "ХОДЬБА";
                 document.getElementById("mode-text").style.color = "#00ff00";
-                log("✅ Системы запущены! Персонаж восстановил форму.");
+                log("✅ Expie поднялся обратно на лапы.");
                 
-                // Сбрасываем физику
-                for (let key in ragdollOffsets) {
-                    ragdollOffsets[key].angle = 0;
-                    ragdollOffsets[key].va = 0;
-                    ragdollOffsets[key].vy = 0;
-                }
+                // Мгновенный сброс физики в исходный ровный пазл
+                ragdoll.vy = 0;
+                ragdoll.headY = 0; ragdoll.tailY = 0; ragdoll.armBY = 0; ragdoll.armFY = 0; ragdoll.legBY = 0; ragdoll.legFY = 0;
+                ragdoll.headA = 0; ragdoll.tailA = 0; ragdoll.armBA = 0; ragdoll.armFA = 0; ragdoll.legBA = 0; ragdoll.legFA = 0;
             }
         }
     });
@@ -154,17 +152,18 @@
 
     let animTime = 0;
 
-    function drawPart(img, x, y, angle, scaleX = 1, pivotX = 0, pivotY = 0) {
+    function drawPart(img, x, y, angle, scaleX = 1) {
         if (!img.complete || img.naturalWidth === 0) return;
         ctx.save();
         ctx.translate(x, y);
         ctx.scale(scaleX, 1);
         ctx.rotate(angle);
-        ctx.drawImage(img, -pivotX, -pivotY);
+        ctx.drawImage(img, 0, 0);
         ctx.restore();
     }
-
+</script>
     function gameLoop() {
+        // Очистка и отрисовка шахты
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#0a0d12"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#2c3540"; ctx.fillRect(0, 168, canvas.width, 72);
@@ -181,90 +180,100 @@
                 player.x -= player.speed; player.direction = "left"; animTime++;
             }
         } else {
-            // СИМУЛЯЦИЯ ФИЗИКИ ПАДЕНИЯ (РЭГДОЛЛ)
-            for (let key in ragdollOffsets) {
-                let o = ragdollOffsets[key];
-                o.angle += o.va;
-                o.dy += o.vy;
-                o.vy += 0.35; // Гравитация деталей
+            // СИМУЛЯЦИЯ ФИЗИКИ РЭГДОЛЛА (Каждая кость падает на пол)
+            ragdoll.vy += 0.35; // Гравитация
 
-                // Пол на уровне 160px для суставов
-                let currentFloorY = 160 - (player.y + 42);
-                if (o.dy > currentFloorY) {
-                    o.dy = currentFloorY;
-                    o.vy = -o.vy * 0.2; // Амортизация удара
-                    o.va *= 0.5; // Трение об пол
-                }
-            }
+            // Физика для головы
+            ragdoll.headY += ragdoll.vy;
+            if (ragdoll.headY > 116) { ragdoll.headY = 116; ragdoll.headA += 0.05; }
+
+            // Физика для хвоста и таза
+            ragdoll.tailY += ragdoll.vy * 0.9;
+            if (ragdoll.tailY > 84) { ragdoll.tailY = 84; ragdoll.tailA -= 0.02; }
+
+            // Физика для лап (рук и ног)
+            ragdoll.armBY += ragdoll.vy * 1.1;
+            ragdoll.armFY += ragdoll.vy * 1.05;
+            ragdoll.legBY += ragdoll.vy * 0.95;
+            ragdoll.legFY += ragdoll.vy;
+
+            if (ragdoll.armBY > 120) ragdoll.armBY = 120;
+            if (ragdoll.armFY > 120) ragdoll.armFY = 120;
+            if (ragdoll.legBY > 72) ragdoll.legBY = 72;
+            if (ragdoll.legFY > 72) ragdoll.legFY = 72;
         }
 
-        // ОТРИСОВКА ПАЗЛА
+        // РАСЧЕТ ОТРИСОВКИ КОМПОНЕНТОВ ПАЗЛА
         let sitY = player.y + 42;
         let flip = player.direction === "left" ? -1 : 1;
 
         // 1. Хвост
-        let tailA = player.isRagdoll ? ragdollOffsets.tail.angle : Math.sin(animTime * 0.1) * 0.1;
-        let tailY = player.isRagdoll ? sitY + ragdollOffsets.tail.dy : sitY + 12;
-        drawPart(sprites.tail, player.x + (2 * flip), tailY, tailA, flip, 0, 0);
+        let tA = player.isRagdoll ? ragdoll.tailA : Math.sin(animTime * 0.1) * 0.1;
+        let tY = player.isRagdoll ? sitY + ragdoll.tailY : sitY + 12;
+        drawPart(sprites.tail, player.x + (2 * flip), tY, tA, flip);
 
-        // 2. Задняя рука
-        let armBA = player.isRagdoll ? ragdollOffsets.upArm.angle : -armSwing * 0.05;
-        let armBY = player.isRagdoll ? sitY + ragdollOffsets.upArm.dy : sitY - 4;
+        // 2. Задняя лапа-рука
+        let aBA = player.isRagdoll ? ragdoll.armBA : -armSwing * 0.05;
+        let aBY = player.isRagdoll ? sitY + ragdoll.armBY : sitY - 4;
         if (sprites.upArm.complete) {
-            drawPart(sprites.upArm, player.x + (14 * flip), armBY, armBA, flip, 0, 0);
-            drawPart(sprites.handB, player.x + ((14 - legSwing) * flip), armBY + 12, armBA * 1.2, flip, 0, 0);
+            drawPart(sprites.upArm, player.x + (14 * flip), aBY, aBA, flip);
+            drawPart(sprites.handB, player.x + ((14 - legSwing) * flip), aBY + 12, aBA * 1.1, flip);
         }
 
-        // 3. Задняя нога
-        let legBA = player.isRagdoll ? ragdollOffsets.thighBack.angle : legSwing * 0.05;
-        let legBY = player.isRagdoll ? sitY + ragdollOffsets.thighBack.dy : sitY + 10;
+        // 3. Задняя лапа-нога
+        let lBA = player.isRagdoll ? ragdoll.legBA : legSwing * 0.05;
+        let lBY = player.isRagdoll ? sitY + ragdoll.legBY : sitY + 10;
         if (sprites.thigh.complete) {
-            drawPart(sprites.thigh, player.x + (4 * flip), legBY, legBA, flip, 0, 0);
-            drawPart(sprites.crus, player.x + ((4 + legSwing * 0.2) * flip), legBY + 12, legBA, flip, 0, 0);
-            drawPart(sprites.foot, player.x + ((4 + legSwing) * flip), legBY + 24, legBA, flip, 0, 0);
+            drawPart(sprites.thigh, player.x + (4 * flip), lBY, lBA, flip);
+            drawPart(sprites.crus, player.x + ((4 + legSwing * 0.2) * flip), lBY + 12, lBA, flip);
+            drawPart(sprites.foot, player.x + ((4 + legSwing) * flip), lBY + 24, lBA, flip);
         }
 
-        // 4. Таз (Основа тела)
-        let torsoY = sitY + (player.isRagdoll ? ragdollOffsets.tail.dy * 0.5 : 6);
-        drawPart(sprites.downTorso, player.x + (4 * flip), torsoY, 0, flip, 0, 0);
+        // 4. Таз (DownTorso)
+        let downTorsoY = player.isRagdoll ? sitY + ragdoll.tailY * 0.7 : sitY + 6;
+        let torsoA = player.isRagdoll ? 0.3 : 0;
+        drawPart(sprites.downTorso, player.x + (4 * flip), downTorsoY, torsoA, flip);
 
-        // 5. Грудь
-        let chestY = sitY + (player.isRagdoll ? ragdollOffsets.upArm.dy * 0.5 : -6);
-        drawPart(sprites.upTorso, player.x + (8 * flip), chestY, 0, flip, 0, 0);
+        // 5. Грудь (UpTorso)
+        let upTorsoY = player.isRagdoll ? sitY + ragdoll.tailY * 0.3 : sitY - 6;
+        drawPart(sprites.upTorso, player.x + (8 * flip), upTorsoY, torsoA * 0.5, flip);
 
-        // Шея
+        // Шея (3 пикселя)
         ctx.fillStyle = "#1e222a";
-        ctx.fillRect(player.x + (18 * flip), chestY - 4, 4 * flip, 3);
+        ctx.fillRect(player.x + (18 * flip), upTorsoY - 4, 4 * flip, 3);
 
         // 6. Голова
-        let headA = player.isRagdoll ? ragdollOffsets.head.angle : 0;
-        let headY = player.isRagdoll ? sitY + ragdollOffsets.head.dy : sitY - 24;
-        drawPart(sprites.head, player.x + (10 * flip), headY, headA, flip, 0, 0);
+        let hA = player.isRagdoll ? ragdoll.headA : 0;
+        let hY = player.isRagdoll ? sitY + ragdoll.headY : sitY - 24;
+        drawPart(sprites.head, player.x + (10 * flip), hY, hA, flip);
 
-        // Глаз визора
+        // Визор глаза
         if (sprites.eyeOpen.complete) {
             ctx.save();
             ctx.shadowBlur = 10; ctx.shadowColor = "#ff3399";
             ctx.fillStyle = "#ffb3d1";
-            ctx.fillRect(player.x + (20 * flip) + (player.isRagdoll ? Math.cos(headA)*2 : 0), headY + 6, 5 * flip, 5);
+            // В режиме рэгдолла глаз смещается по кругу вращения головы
+            let eyeXOffset = player.isRagdoll ? Math.cos(hA) * 6 : 20;
+            let eyeYOffset = player.isRagdoll ? Math.sin(hA) * 6 : 6;
+            ctx.fillRect(player.x + (eyeXOffset * flip), hY + eyeYOffset, 5 * flip, 5);
             ctx.restore();
         }
 
-        // 7. Передняя нога
-        let legFA = player.isRagdoll ? ragdollOffsets.thighFront.angle : -legSwing * 0.05;
-        let legFY = player.isRagdoll ? sitY + ragdollOffsets.thighFront.dy : sitY + 10;
+        // 7. Передняя лапа-нога
+        let lFA = player.isRagdoll ? ragdoll.legFA : -legSwing * 0.05;
+        let lFY = player.isRagdoll ? sitY + ragdoll.legFY : sitY + 10;
         if (sprites.thigh.complete) {
-            drawPart(sprites.thigh, player.x + (8 * flip), legFY, legFA, flip, 0, 0);
-            drawPart(sprites.crus, player.x + ((8 - legSwing * 0.2) * flip), legFY + 12, legFA, flip, 0, 0);
-            drawPart(sprites.foot, player.x + ((8 - legSwing) * flip), legFY + 24, legFA, flip, 0, 0);
+            drawPart(sprites.thigh, player.x + (8 * flip), lFY, lFA, flip);
+            drawPart(sprites.crus, player.x + ((8 - legSwing * 0.2) * flip), lFY + 12, lFA, flip);
+            drawPart(sprites.foot, player.x + ((8 - legSwing) * flip), lFY + 24, lFA, flip);
         }
 
-        // 8. Передняя рука
-        let armFA = player.isRagdoll ? ragdollOffsets.downArm.angle : armSwing * 0.05;
-        let armFY = player.isRagdoll ? sitY + ragdollOffsets.downArm.dy : sitY - 4;
+        // 8. Передняя лапа-рука
+        let aFA = player.isRagdoll ? ragdoll.armFA : armSwing * 0.05;
+        let aFY = player.isRagdoll ? sitY + ragdoll.armFY : sitY - 4;
         if (sprites.downArm.complete) {
-            drawPart(sprites.downArm, player.x + (18 * flip), armFY, armFA, flip, 0, 0);
-            drawPart(sprites.handF, player.x + ((18 + armSwing) * flip), armFY + 12, armFA * 1.2, flip, 0, 0);
+            drawPart(sprites.downArm, player.x + (18 * flip), aFY, aFA, flip);
+            drawPart(sprites.handF, player.x + ((18 + armSwing) * flip), aFY + 12, aFA * 1.1, flip);
         }
 
         requestAnimationFrame(gameLoop);
