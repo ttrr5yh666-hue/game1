@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCAV: CASUALTIES UNKNOWN 2D</title>
+    <title>SCAV: CASUALTIES UNKNOWN PLATFORMS</title>
     <style>
         body {
             background-color: #080a0c;
@@ -35,44 +35,83 @@
         }
 
         .stats { display: flex; justify-content: space-between; margin-bottom: 10px; background: #181d26; padding: 10px; border-radius: 4px; border: 1px solid #222933; font-size: 14px; }
+        .warning { color: #ff3333; font-weight: bold; text-align: center; margin: 5px 0; display: none; font-size: 13px; }
         .log { height: 75px; background-color: #090b0e; border: 1px solid #222933; padding: 10px; overflow-y: auto; font-size: 13px; margin-bottom: 15px; border-radius: 4px; color: #8b949e; }
+        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { background-color: #181d26; color: #c9d1d9; border: 1px solid #222933; padding: 10px; cursor: pointer; border-radius: 4px; font-family: inherit; transition: 0.1s; font-weight: bold; }
+        button:hover { background-color: #222933; border-color: #ff3366; color: #fff; }
+        button:disabled { opacity: 0.2; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
 <div class="game-container">
-    <h1>SCAV: CASUALTIES UNKNOWN (2D)</h1>
+    <h1>SCAV: CASUALTIES UNKNOWN (PLATFORMS)</h1>
     
     <canvas id="gameCanvas" width="500" height="240"></canvas>
 
     <div class="stats">
-        <div>Статус: <span id="status">Инициализация...</span></div>
-        <div>Управление: <b>← → и Пробел</b></div>
+        <div>Метры: <span id="progress">0</span> / 2000м</div>
+        <div>Корпус: <span id="hp">100</span>%</div>
+        <div>Мины: <span id="mines">2</span>💥</div>
     </div>
+
+    <div class="stats" style="font-size: 12px; color: #8b949e;">
+        <div>Титан: <span id="titan">0</span></div>
+        <div>Порох: <span id="gunpowder">1</span></div>
+        <div>Управление: <b>← → (Ходьба) | ↑ ↓ (Платформы)</b></div>
+    </div>
+
+    <div id="bleed-warn" class="warning">⚠️ ОРАНЖЕВОЕ КРОВОТЕЧЕНИЕ! Каждый шаг отнимает HP!</div>
     
-    <div id="log" class="log">Загрузка текстуры Expie...</div>
+    <div id="log" class="log">Системы сканирования шлема запущены. Картинка Expie загружается...</div>
+
+    <div class="actions">
+        <button onclick="rechargeBattery()">Лечение (1 тит.)</button>
+        <button onclick="craftMine()">Скрафтить мину (1 пор. + 1 тит.)</button>
+    </div>
 </div>
 <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    // Прямая ссылка на картинку Expie со всеми правами
-    const expieImg = new Image();
-    expieImg.src = "https://squarespace-cdn.com"; 
-
+    let hp = 100;
+    let depth = 0;
+    const maxDepth = 2000; 
+    let leak = false; // Флаг оранжевого кровотечения
     let gameOver = false;
-    let isJumping = false;
-    let yVelocity = 0;
-    const gravity = 0.5;
+    let inventory = { titan: 0, gunpowder: 1, mines: 2 };
 
-    // Параметры Expie
+    const blockSize = 20;
+    const topFloorY = 55;
+    const bottomFloorY = 135;
+
+    // Загрузка реального пиксельного спрайта Expie
+    const expieImg = new Image();
+    expieImg.src = "https://ibb.co"; // Чистый пиксельный спрайт Expie
+
+    // Хранилище для капель оранжевой крови на блоках
+    let bloodDrops = [];
+
     let player = {
         x: 50,
-        y: 120,
-        width: 35,
-        height: 70,
-        speed: 4
+        y: topFloorY, 
+        width: 25,
+        height: 55,
+        speed: 4,
+        currentFloor: "top"
     };
+
+    let gameObjects = [
+        { x: 300, y: "top", type: "titan", icon: "💎", active: true },
+        { x: 550, y: "bottom", type: "glass", icon: "💠", active: true },
+        { x: 800, y: "top", type: "trap", icon: "💥", active: true },
+        { x: 1100, y: "bottom", type: "enemy", icon: "👾", active: true },
+        { x: 1350, y: "top", type: "titan", icon: "💎", active: true },
+        { x: 1550, y: "bottom", type: "trap", icon: "💥", active: true },
+        { x: 1750, y: "top", type: "enemy", icon: "👾", active: true },
+        { x: maxDepth, y: "bottom", type: "exit", icon: "🚪", active: true } 
+    ];
 
     const logEl = document.getElementById('log');
     function log(text) {
@@ -81,66 +120,209 @@
     }
 
     expieImg.onload = function() {
-        document.getElementById('status').innerText = "Готов к тесту";
-        log("✅ Текстура Expie успешно загружена! Стрелочки — ходить, Пробел — прыгать.");
-    };
-
-    expieImg.onerror = function() {
-        document.getElementById('status').innerText = "Ошибка текстуры";
-        log("❌ Не удалось загрузить картинку. Проверьте подключение к сети.");
+        log("✅ Спрайт Expie успешно интегрирован в систему!");
     };
 
     let keys = {};
-    window.addEventListener("keydown", (e) => { keys[e.key] = true; });
+    window.addEventListener("keydown", (e) => { 
+        keys[e.key] = true; 
+        
+        if (!gameOver) {
+            if (e.key === "ArrowDown" && player.currentFloor === "top") {
+                player.y = bottomFloorY;
+                player.currentFloor = "bottom";
+                log("⬇️ Expie перепрыгнул на нижний ярус.");
+            } else if (e.key === "ArrowUp" && player.currentFloor === "bottom") {
+                player.y = topFloorY;
+                player.currentFloor = "top";
+                log("⬆️ Expie поднялся на верхние платформы.");
+            }
+        }
+    });
     window.addEventListener("keyup", (e) => { keys[e.key] = false; });
+
+    function updateUI() {
+        document.getElementById('hp').innerText = hp;
+        document.getElementById('progress').innerText = Math.min(maxDepth, Math.floor(depth));
+        document.getElementById('mines').innerText = inventory.mines;
+        document.getElementById('titan').innerText = inventory.titan;
+        document.getElementById('gunpowder').innerText = inventory.gunpowder;
+        document.getElementById('bleed-warn').style.display = leak ? 'block' : 'none';
+
+        if (hp <= 0 && !gameOver) {
+            gameOver = true;
+            log("<b style='color:#ff3333;'>💀 КРИТИЧЕСКИЙ СБОЙ: Жизненные показатели Expie на нуле.</b>");
+        }
+    }
+
+    function checkCollisions() {
+        gameObjects.forEach(obj => {
+            if (obj.active && Math.abs(player.x - obj.x) < 25 && player.currentFloor === obj.y) {
+                if (obj.type === "exit") {
+                    gameOver = true;
+                    log("<b style='color:#00ff00;'>🎉 МИССИЯ ВЫПОЛНЕНА! Expie спасся на лифте!</b>");
+                    return;
+                }
+
+                obj.active = false;
+                if (obj.type === "titan") {
+                    inventory.titan++;
+                    log("💎 Найден Титан.");
+                } else if (obj.type === "glass") {
+                    hp -= 15;
+                    log("💠 Хруст! Стекло разрезало лапу скафандра (-15 HP).");
+                } else if (obj.type === "trap") {
+                    if (inventory.mines > 0) {
+                        inventory.mines--;
+                        log("💥 Ловушка уничтожена броском мины-липучки!");
+                    } else {
+                        hp -= 35; leak = true;
+                        log("<b style='color:#ff5500;'>💥 БАБАХ! Подоpвался на мине! Началось ОРАНЖЕВОЕ КРОВОТЕЧЕНИЕ!</b>");
+                    }
+                } else if (obj.type === "enemy") {
+                    if (inventory.mines > 0) {
+                        inventory.mines--;
+                        log("👾 Мутант уничтожен взрывом липучки!");
+                    } else {
+                        hp -= 30; leak = true;
+                        log("⚔️ Тяжелый ближний бой! Мутант убит, у Expie открылось кровотечение (-30 HP).");
+                    }
+                }
+                updateUI();
+            }
+        });
+    }
+
+    function drawBlocks(offsetX) {
+        ctx.fillStyle = "#2c3540"; 
+        ctx.strokeStyle = "#161b22"; 
+        ctx.lineWidth = 1;
+
+        for (let col = 0; col < canvas.width / blockSize + 10; col++) {
+            let blockX = (col * blockSize) + (offsetX % blockSize) - blockSize;
+            
+            for (let row = 0; row < 1; row++) {
+                let blockY = 110 + (row * blockSize);
+                ctx.fillRect(blockX, blockY, blockSize, blockSize);
+                ctx.strokeRect(blockX, blockY, blockSize, blockSize);
+            }
+
+            for (let row = 0; row < 2; row++) {
+                let blockY = 190 + (row * blockSize);
+                ctx.fillRect(blockX, blockY, blockSize, blockSize);
+                ctx.strokeRect(blockX, blockY, blockSize, blockSize);
+            }
+        }
+    }
+
+    // Рисование капель оранжевой крови на блоках
+    function drawBlood(offsetX) {
+        ctx.fillStyle = "#ff6600"; // Яркая оранжевая кровь фурри
+        bloodDrops.forEach(drop => {
+            ctx.fillRect(drop.x + offsetX, drop.y, 4, 4);
+        });
+    }
 
     function gameLoop() {
         if (gameOver) return;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Рисуем временный пол, пока нет блоков карты
-        ctx.fillStyle = "#1c2128";
-        ctx.fillRect(0, 190, canvas.width, 50);
+        ctx.fillStyle = "#0a0d12";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Физика ходьбы влево и вправо
-        if (keys["ArrowRight"] && player.x < canvas.width - player.width) {
+        let isMoving = false;
+
+        if (keys["ArrowRight"] && player.x < maxDepth + 40) {
             player.x += player.speed;
+            isMoving = true;
+            checkCollisions();
         }
-        if (keys["ArrowLeft"] && player.x > 10) {
+        if (keys["ArrowLeft"] && player.x > 30) {
             player.x -= player.speed;
+            isMoving = true;
+            checkCollisions();
         }
 
-        // Физика прыжка с гравитацией
-        if (keys[" "] && !isJumping) {
-            isJumping = true;
-            yVelocity = -9; // Сила прыжка вверх
+        // Логика кровотечения при ходьбе
+        if (leak && isMoving && Math.random() < 0.05) {
+            hp -= 1;
+            // Оставляем каплю крови на текущем этаже
+            let bloodY = (player.currentFloor === "top") ? 106 : 186;
+            bloodDrops.push({ x: player.x, y: bloodY + Math.random() * 4 });
+            updateUI();
         }
 
-        if (isJumping) {
-            player.y += yVelocity;
-            yVelocity += gravity; // Тянем персонажа обратно вниз
+        depth = player.x; 
+        updateUI();
 
-            // Проверяем приземление на временный пол
-            if (player.y >= 120) {
-                player.y = 120;
-                isJumping = false;
-                yVelocity = 0;
+        let offsetX = canvas.width / 2 - player.x;
+        if (offsetX > 0) offsetX = 0;
+        if (offsetX < canvas.width - (maxDepth + 100)) offsetX = canvas.width - (maxDepth + 100);
+
+        // Рисуем блоки земли и следы оранжевой крови
+        drawBlocks(offsetX);
+        drawBlood(offsetX);
+
+        ctx.font = "20px Courier New";
+        gameObjects.forEach(obj => {
+            if (obj.active) {
+                let objY = (obj.y === "top") ? topFloorY + 35 : bottomFloorY + 35;
+                ctx.fillText(obj.icon, obj.x + offsetX, objY);
+                
+                if(obj.type === "exit") {
+                    ctx.fillStyle = "#00ff00"; 
+                    ctx.fillRect(obj.x + offsetX + 5, objY - 15, 15, 60);
+                }
             }
+        });
+
+        ctx.fillStyle = "#ff3366";
+        ctx.font = "12px Courier New";
+        let left = Math.floor(maxDepth - player.x);
+        if (left > 0) {
+            ctx.fillText(`Лифт: Впереди в ${left}м →`, 310, 25);
         }
 
-        // Отрисовка Expie с картинки
+        // Отрисовка реального спрайта Expie
         if (expieImg.complete && expieImg.naturalWidth !== 0) {
-            ctx.drawImage(expieImg, player.x, player.y, player.width, player.height);
+            ctx.drawImage(expieImg, player.x + offsetX - 5, player.y, player.width + 10, player.height);
         } else {
-            // Резервный силуэт, если интернет зависнет
-            ctx.fillStyle = "#ff3366";
-            ctx.fillRect(player.x, player.y, player.width, player.height);
+            // Если картинка долго грузится, показываем временный силуэт с розовым глазом
+            ctx.fillStyle = "#252d38";
+            ctx.fillRect(player.x + offsetX, player.y + 15, 16, 40);
+            ctx.fillStyle = "#ff99cc";
+            ctx.fillRect(player.x + offsetX + 10, player.y + 4, 5, 5);
         }
 
         requestAnimationFrame(gameLoop);
     }
 
+    function rechargeBattery() {
+        if (inventory.titan >= 1) {
+            inventory.titan--;
+            hp = Math.min(100, hp + 30);
+            leak = false; // Медикаменты останавливают оранжевое кровотечение!
+            log("🩹 Раны перевязаны, оранжевое кровотечение успешно остановлено.");
+            updateUI();
+        } else {
+            log("❌ Ошибка: Нужен 1 Титан для фиксации ран.");
+        }
+    }
+
+    function craftMine() {
+        if (inventory.gunpowder >= 1 && inventory.titan >= 1) {
+            inventory.gunpowder--;
+            inventory.titan--;
+            inventory.mines++;
+            log("🛠️ Собрана активная мина-липучка.");
+            updateUI();
+        } else {
+            log("❌ Недостаточно компонентов.");
+        }
+    }
+
+    updateUI();
     gameLoop();
 </script>
 </body>
