@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCAV: ПРОТОТИП EXPIE</title>
+    <style>
+        body {
+            background-color: #0c0f12;
+            color: #d1d7de;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .game-container {
+            width: 540px;
+            background-color: #161b22;
+            border: 2px solid #ff5500;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(255, 85, 0, 0.3);
+        }
+        h1 { text-align: center; color: #ff5500; font-size: 22px; margin-top: 0; letter-spacing: 2px; }
+        .character-profile { background: #0d1117; border: 1px dashed #ff5500; padding: 10px; margin-bottom: 15px; font-size: 13px; border-radius: 4px; }
+        .stats { display: flex; justify-content: space-between; margin-bottom: 10px; background: #21262d; padding: 10px; border-radius: 4px; }
+        .warning { color: #ff3333; font-weight: bold; text-align: center; margin: 5px 0; display: none; }
+        .log { height: 140px; background-color: #0d1117; border: 1px solid #30363d; padding: 10px; overflow-y: auto; font-size: 13px; margin-bottom: 15px; border-radius: 4px; }
+        .actions, .craft-zone { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        button { background-color: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 10px; cursor: pointer; border-radius: 4px; font-family: inherit; transition: 0.2s; font-weight: bold; }
+        button:hover { background-color: #30363d; border-color: #8b949e; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-action { border-color: #ff5500; color: #ff8844; }
+        .btn-action:hover { background-color: #3c1e0e; }
+        .btn-glass { border-color: #00ccff; color: #00ccff; display: none; grid-column: span 2; }
+        .btn-glass:hover { background-color: #052e3d; }
+        .btn-fight { border-color: #ff3333; color: #ff3333; display: none; }
+        .btn-fight:hover { background-color: #441111; }
+        .btn-defuse { border-color: #ffff00; color: #ffff00; display: none; grid-column: span 2; }
+        .btn-defuse:hover { background-color: #3a3a00; }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <h1>ПРОТОТИП: EXPIE (ПОДРЫВНИК)</h1>
+    
+    <div class="character-profile">
+        🤖 <b>Спецификация класса:</b> Модель Expie. Осторожно! Впереди могут быть старые мины-ловушки.
+    </div>
+
+    <div class="stats">
+        <div>Глубина: <span id="depth">0</span>м</div>
+        <div>HP корпуса: <span id="hp">100</span>%</div>
+        <div>Заряд батареи: <span id="battery">5</span>🔋</div>
+    </div>
+
+    <div class="stats" style="font-size: 12px;">
+        <div>Титан: <span id="titan">0</span></div>
+        <div>Порох: <span id="gunpowder">1</span></div>
+        <div>Мины-липучки: <span id="mines">2</span>💥</div>
+    </div>
+
+    <div id="bleed-warn" class="warning">⚠️ КРИТИЧЕСКИЙ СБОЙ: Утечка масла (-15 HP за ход!)</div>
+    <div id="glass-warn" class="warning" style="color: #00ccff;">💎 В НОГЕ ОСКОЛОК СТЕКЛА! Движение наносит урон!</div>
+    <div id="enemy-warn" class="warning" style="color: #ff3333;">👾 ОБНАРУЖЕН ВРАГ ВПЕРЕДИ! ПУТЬ ЗАБЛОКИРОВАН!</div>
+    <div id="mine-warn" class="warning" style="color: #ffff00;">🔔 ЩЕЛЧОК! Вы наступили на мину-ловушку! Шаг вперед подорвет вас!</div>
+    
+    <div id="log" class="log">Expie активирован. Датчики сканирования грунта запущены.</div>
+
+    <div class="actions">
+        <button id="btn-move" onclick="goDeeper()" class="btn-action">Идти глубже (-1🔋)</button>
+        <button id="btn-mine" onclick="useMine()">Взорвать преграду (-1💥)</button>
+        <button id="btn-fight" onclick="fightEnemy()" class="btn-fight">⚔️ Атаковать вручную</button>
+        <button id="btn-defuse" onclick="defuseMine()" class="btn-defuse">✂️ Разминировать ловушку (Нужен инструмент)</button>
+        <button id="btn-pull-glass" onclick="pullOutGlass()" class="btn-glass">⚙️ Вытащить стекло из ноги</button>
+    </div>
+
+    <div class="craft-zone">
+        <button onclick="rechargeBattery()">Зарядить батарею (1 тит.)</button>
+        <button onclick="craftMine()">Собрать мину (1 пор. + 1 тит.)</button>
+    </div>
+</div>
+
+<script>
+    let hp = 100;
+    let depth = 0;
+    let battery = 5;
+    let leak = false;
+    let hasGlass = false; 
+    let activeTrap = false; 
+    let hasEnemy = false;   
+    let steppedOnMine = false; 
+    let inventory = { titan: 0, gunpowder: 1, mines: 2 };
+
+    const logEl = document.getElementById('log');
+
+    function log(text) {
+        logEl.innerHTML += `<br>${text}`;
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+    function updateUI() {
+        document.getElementById('hp').innerText = hp;
+        document.getElementById('depth').innerText = depth;
+        document.getElementById('battery').innerText = battery;
+        document.getElementById('titan').innerText = inventory.titan;
+        document.getElementById('gunpowder').innerText = inventory.gunpowder;
+        document.getElementById('mines').innerText = inventory.mines;
+        
+        document.getElementById('bleed-warn').style.display = leak ? 'block' : 'none';
+        document.getElementById('glass-warn').style.display = hasGlass ? 'block' : 'none';
+        document.getElementById('enemy-warn').style.display = hasEnemy ? 'block' : 'none';
+        document.getElementById('mine-warn').style.display = steppedOnMine ? 'block' : 'none';
+        
+        document.getElementById('btn-pull-glass').style.display = hasGlass ? 'block' : 'none';
+        document.getElementById('btn-fight').style.display = hasEnemy ? 'block' : 'none';
+        document.getElementById('btn-defuse').style.display = steppedOnMine ? 'block' : 'none';
+        
+        document.getElementById('btn-defuse').disabled = inventory.mines <= 0;
+        document.getElementById('btn-mine').disabled = (!activeTrap && !hasEnemy) || inventory.mines <= 0;
+        document.getElementById('btn-move').disabled = activeTrap || hasEnemy || battery <= 0;
+
+        if(hp <= 0) {
+            log("<b style='color:#ff3333;'>💀 СИСТЕМА УНИЧТОЖЕНА. Ремонт невозможен. Перезапустите страницу.</b>");
+            document.querySelectorAll('button').forEach(b => b.disabled = true);
+        }
+    }
+
+    function goDeeper() {
+        if(battery <= 0 || activeTrap || hasEnemy) return;
+        
+        if (steppedOnMine) {
+            steppedOnMine = false;
+            hp -= 40;
+            leak = true;
+            log("<b style='color:#ff3333;'>💥 БУУУМ! Мина под ногами взорвалась! Корпус получил 40 урона, баки с маслом пробиты!</b>");
+        }
+
+        if(leak) {
+            hp -= 15;
+            log("🔧 Масло вытекает! Корпус получает 15 урона.");
+        }
+        if(hasGlass) {
+            hp -= 20;
+            log("💎 Осколок глубже вонзается в привод ноги! Нанесено 20 урона.");
+        }
+
+        battery--;
+        depth += 40;
+        log(`<b style='color:#ff8844;'>Expie шагает глубже... Текущая глубина: ${depth}м.</b>`);
+
+        let event = Math.random();
+        
+        if (event < 0.20) {
+            steppedOnMine = true;
+            log("<b style='color:#ffff00;'>🔔 ЩЕЛЧОК! Под стопой Expie зафиксировано давление! Вы наступили на мину. Попытка сделать следующий шаг приведет к детонации!</b>");
+        } else if (event < 0.40) {
+            hasEnemy = true;
+            log("<b style='color:#ff3333;'>👾 ИЗ ТЕМНОТЫ ВЫПРЫГНУЛ СЛЕПОЙ МУТАНТ ПЕЩЕР! Путь заблокирован!</b>");
+        } else if(event < 0.60) {
+            let res = Math.random() > 0.4 ? 'titan' : 'gunpowder';
+            inventory[res]++;
+            log(`📦 Найдена деталь: Получен ${res === 'titan' ? 'Титан' : 'Порох'} (+1)`);
+        } else if(event < 0.75) {
+            activeTrap = true;
+            log("⚠️ <b>ВПЕРЕДИ КРУПНЫЙ ЗАВАЛ!</b> Нужен подрыв!");
+            hp -= 10;
+        } else if(event < 0.90) {
+            if (!hasGlass) {
+                hasGlass = true;
+                hp -= 15;
+                log("<b style='color:#00ccff;'>⚠️ ХРУСТ! Expie наступил на осколок стекла. Металлическая стопа повреждена!</b>");
+            }
+        } else {
+            log("⚙️ Сканирование сектора завершено. Опасностей не обнаружено.");
+        }
+
+        updateUI();
+    }
+
+    function defuseMine() {
+        if (steppedOnMine && inventory.mines > 0) {
+            steppedOnMine = false;
+            inventory.mines++; 
+            log("<b style='color:#ffff00;'>✂️ Успешно! Expie использовал свои инженерные навыки, обезвредил ловушку и заложил мину в инвентарь (+1 мина).</b>");
+            updateUI();
+        }
+    }
+
+    function fightEnemy() {
+        if(hasEnemy) {
+            let dmg = Math.floor(Math.random() * 20) + 20;
+            hp -= dmg;
+            hasEnemy = false;
+            log(`⚔️ Expie победил монстра вручную, но потерял <b>${dmg} HP</b>.`);
+            if(Math.random() > 0.5 && !leak) {
+                leak = true;
+                log("🔧 Мертвый монстр успел пробить масляный бак робота перед смертью!");
+            }
+            updateUI();
+        }
+    }
+
+    function useMine() {
+        if(inventory.mines <= 0) return;
+
+        if (hasEnemy) {
+            inventory.mines--;
+            hasEnemy = false;
+            log("💥 <b>БАБАХ!</b> Монстр разорван на куски нашей миной!");
+            updateUI();
+        } else if(activeTrap) {
+            inventory.mines--;
+            activeTrap = false;
+            log("💥 <b>БАБАХ!</b> Завал полностью уничтожен!");
+            if(Math.random() > 0.5) {
+                inventory.titan++;
+                log("📦 Найдена титановая пластина!");
+            }
+            updateUI();
+        }
+    }
+
+    function pullOutGlass() {
+        if(hasGlass) {
+            hasGlass = false;
+            leak = true; 
+            log("🔧 Осколок стекла извлечен, но из гидропривода начало вытекать масло!");
+            updateUI();
+        }
+    }
+
+    function rechargeBattery() {
+        if(inventory.titan >= 1) {
+            inventory.titan--;
+            battery = Math.min(10, battery + 3);
+            hp = Math.min(100, hp + 10);
+            leak = false; 
+            log("⚡ Корпус заварен титаном, батарея заряжена (+3 батареи, +10 HP).");
+            updateUI();
+        } else {
+            log("❌ Нет титана для ремонта!");
+        }
+    }
+
+    function craftMine() {
+        if(inventory.gunpowder >= 1 && inventory.titan >= 1) {
+            inventory.gunpowder--;
+            inventory.titan--;
+            inventory.mines++;
+            log("🛠️ Собрана новая мина-липучка.");
+            updateUI();
+        } else {
+            log("❌ Не хватает компонентов!");
+        }
+    }
+
+    updateUI();
+</script>
+</body>
+</html>
