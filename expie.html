@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCAV: CASUALTIES UNKNOWN RAGDOLL</title>
+    <title>SCAV: CASUALTIES UNKNOWN (RAGDOLL TRIGGER)</title>
     <style>
         body {
             background-color: #080a0c;
@@ -49,9 +49,7 @@
             display: block;
             margin: 0 auto 15px auto;
             border-radius: 4px;
-            cursor: grab;
         }
-        #gameCanvas:active { cursor: grabbing; }
 
         .stats { display: flex; justify-content: space-between; margin-bottom: 10px; background: #181d26; padding: 10px; border-radius: 4px; border: 1px solid #222933; font-size: 14px; }
         .log { height: 75px; background-color: #090b0e; border: 1px solid #222933; padding: 10px; overflow-y: auto; font-size: 13px; margin-bottom: 15px; border-radius: 4px; color: #8b949e; }
@@ -66,11 +64,11 @@
     <canvas id="gameCanvas" width="500" height="240"></canvas>
 
     <div class="stats">
-        <div>Режим физики: <span style="color: #ff3366;">Рэгдолл (Ragdoll)</span></div>
-        <div>Управление: <b>Зажми мышку на Expie и тяни!</b></div>
+        <div>Режим скафандра: <span id="mode-text" style="color: #00ff00; font-weight: bold;">ХОДЬБА</span></div>
+        <div>Кнопка <b>[ X ]</b>: Падение / Встать</div>
     </div>
     
-    <div id="log" class="log">> Активация физических суставов марионетки... Зажми ЛКМ на Expie и крути его!</div>
+    <div id="log" class="log">> Системы стабилизированы. Стрелочки — ходить, [ X ] — упасть!</div>
 </div>
 <script>
     const canvas = document.getElementById("gameCanvas");
@@ -82,6 +80,7 @@
         logEl.scrollTop = logEl.scrollHeight;
     }
 
+    // Загрузка спрайтов
     const sprites = {
         head: new Image(), eyeOpen: new Image(), upTorso: new Image(),
         downTorso: new Image(), tail: new Image(), thigh: new Image(),
@@ -102,19 +101,27 @@
     sprites.handB.src = "experimentHandB.png";
     sprites.handF.src = "experimentHandF.png";
 
+    let player = {
+        x: 220,
+        y: 40,
+        speed: 3,
+        direction: "right",
+        isRagdoll: false
+    };
+
     let points = [
-        { x: 250, y: 40, oldX: 250, oldY: 40, pinned: false },       
-        { x: 250, y: 65, oldX: 250, oldY: 65, pinned: false },       
-        { x: 250, y: 90, oldX: 250, oldY: 90, pinned: false },       
-        { x: 232, y: 98, oldX: 232, oldY: 98, pinned: false },       
-        { x: 246, y: 104, oldX: 246, oldY: 104, pinned: false },     
-        { x: 246, y: 118, oldX: 246, oldY: 118, pinned: false },     
-        { x: 242, y: 130, oldX: 242, oldY: 130, pinned: false },     
-        { x: 254, y: 104, oldX: 254, oldY: 104, pinned: false },     
-        { x: 254, y: 118, oldX: 254, oldY: 118, pinned: false },     
-        { x: 258, y: 130, oldX: 258, oldY: 130, pinned: false },     
-        { x: 238, y: 76, oldX: 238, oldY: 76, pinned: false },       
-        { x: 262, y: 76, oldX: 262, oldY: 76, pinned: false }        
+        { x: 250, y: 40, oldX: 250, oldY: 40 },       
+        { x: 250, y: 65, oldX: 250, oldY: 65 },       
+        { x: 250, y: 90, oldX: 250, oldY: 90 },       
+        { x: 232, y: 98, oldX: 232, oldY: 98 },       
+        { x: 246, y: 104, oldX: 246, oldY: 104 },     
+        { x: 246, y: 118, oldX: 246, oldY: 118 },     
+        { x: 242, y: 130, oldX: 242, oldY: 130 },     
+        { x: 254, y: 104, oldX: 254, oldY: 104 },     
+        { x: 254, y: 118, oldX: 254, oldY: 118 },     
+        { x: 258, y: 130, oldX: 258, oldY: 130 },     
+        { x: 238, y: 76, oldX: 238, oldY: 76 },       
+        { x: 262, y: 76, oldX: 262, oldY: 76 }        
     ];
 
     let constraints = [
@@ -132,121 +139,164 @@
     ];
 
     const gravity = 0.35;
-    const bounce = 0.4;
-    let isDragging = false;
-    let dragPoint = null;
-
-    function getMousePos(canvas, evt) {
-        let rect = canvas.getBoundingClientRect();
-        return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
-    }
-
-    canvas.addEventListener("mousedown", (e) => {
-        let mouse = getMousePos(canvas, e);
-        points.forEach(p => {
-            let dist = Math.hypot(p.x - mouse.x, p.y - mouse.y);
-            if (dist < 22) {
-                isDragging = true;
-                dragPoint = p;
-                p.pinned = true;
+    const bounce = 0.3;
+    let keys = {};
+    let animTime = 0;
+</script>
+<script>
+    window.addEventListener("keydown", (e) => { 
+        keys[e.key] = true; 
+        
+        // Переключение режимов по кнопке X (английской) или Ч (русской)
+        if (e.key.toLowerCase() === "x" || e.key.toLowerCase() === "ч") {
+            player.isRagdoll = !player.isRagdoll;
+            
+            if (player.isRagdoll) {
+                document.getElementById("mode-text").innerText = "РЭГДОЛЛ";
+                document.getElementById("mode-text").style.color = "#ff3366";
+                log("⚠️ Мышцы отключены! Скафандр Expie рухнул на пол.");
+                
+                // Переносим текущие координаты из режима ходьбы в точки физики
+                points[0].x = player.x + 22; points[0].y = player.y + 18; // Голова
+                points[1].x = player.x + 20; points[1].y = player.y + 36; // Грудь
+                points[2].x = player.x + 16; points[2].y = player.y + 58; // Таз
+                points.forEach(p => { p.oldX = p.x; p.oldY = p.y; });
+            } else {
+                document.getElementById("mode-text").innerText = "ХОДЬБА";
+                document.getElementById("mode-text").style.color = "#00ff00";
+                log("✅ Моторика восстановлена! Expie поднялся на лапы.");
+                
+                // Возвращаем персонажа в режим ходьбы туда, где упал таз
+                player.x = points[2].x - 16;
+                player.y = Math.min(points[2].y - 58, 60);
             }
-        });
-    });
-
-    canvas.addEventListener("mousemove", (e) => {
-        if (isDragging && dragPoint) {
-            let mouse = getMousePos(canvas, e);
-            dragPoint.x = mouse.x;
-            dragPoint.y = mouse.y;
-            dragPoint.oldX = mouse.x;
-            dragPoint.oldY = mouse.y;
         }
     });
+    window.addEventListener("keyup", (e) => { keys[e.key] = false; });
 
-    window.addEventListener("mouseup", () => {
-        if (isDragging && dragPoint) {
-            dragPoint.pinned = false;
-            isDragging = false;
-            dragPoint = null;
+    function drawWalkingExpie(x, y) {
+        let legSwing = Math.sin(animTime * 0.15) * 6;
+        let armSwing = Math.cos(animTime * 0.15) * 4;
+
+        if (!keys["ArrowRight"] && !keys["ArrowLeft"]) {
+            legSwing = 0; armSwing = 0;
         }
-    });
+
+        ctx.save();
+        if (player.direction === "left") {
+            ctx.translate(x + 25, y); ctx.scale(-1, 1); ctx.translate(-x - 25, -y);
+        }
+
+        let sitY = y + 42; 
+
+        if (sprites.tail.complete) ctx.drawImage(sprites.tail, x + 2, sitY + 12, 24, 24);
+        if (sprites.upArm.complete && sprites.handB.complete) {
+            ctx.drawImage(sprites.upArm, x + 14 - armSwing * 0.2, sitY - 4, 16, 12);
+            ctx.drawImage(sprites.handB, x + 24 - armSwing * 0.4, sitY, 10, 10);
+        }
+        if (sprites.thigh.complete && sprites.crus.complete && sprites.foot.complete) {
+            let backLegOffset = legSwing;
+            ctx.drawImage(sprites.thigh, x + 4 + backLegOffset * 0.2, sitY + 10, 16, 12);
+            ctx.drawImage(sprites.crus, x + 10 + backLegOffset * 0.4, sitY + 16, 12, 14);
+            ctx.drawImage(sprites.foot, x + 12 + backLegOffset, sitY + 26, 14, 8);
+        }
+        if (sprites.downTorso.complete) ctx.drawImage(sprites.downTorso, x + 4, sitY + 6, 26, 14);
+        if (sprites.upTorso.complete) ctx.drawImage(sprites.upTorso, x + 8, sitY - 6, 26, 16);
+
+        ctx.fillStyle = "#1e222a"; ctx.fillRect(x + 18, sitY - 10, 6, 3); 
+
+        if (sprites.head.complete) ctx.drawImage(sprites.head, x + 10, sitY - 24, 24, 16);
+        if (sprites.eyeOpen.complete) {
+            ctx.shadowBlur = 10; ctx.shadowColor = "#ff3399";
+            ctx.drawImage(sprites.eyeOpen, x + 22, sitY - 18, 6, 6);
+            ctx.shadowBlur = 0;
+        }
+        if (sprites.thigh.complete && sprites.crus.complete && sprites.foot.complete) {
+            let frontLegOffset = -legSwing;
+            ctx.drawImage(sprites.thigh, x + 8 + frontLegOffset * 0.2, sitY + 10, 16, 12);
+            ctx.drawImage(sprites.crus, x + 14 + frontLegOffset * 0.4, sitY + 16, 12, 14);
+            ctx.drawImage(sprites.foot, x + 18 + frontLegOffset, sitY + 26, 14, 8);
+        }
+        if (sprites.downArm.complete && sprites.handF.complete) {
+            ctx.drawImage(sprites.downArm, x + 18 + armSwing * 0.2, sitY - 4, 16, 12);
+            ctx.drawImage(sprites.handF, x + 30 + armSwing * 0.4, sitY, 10, 10);
+        }
+        ctx.restore();
+    }
 
     function updatePhysics() {
         points.forEach(p => {
-            if (!p.pinned) {
-                let vx = p.x - p.oldX;
-                let vy = p.y - p.oldY;
-                p.oldX = p.x;
-                p.oldY = p.y;
-                p.x += vx;
-                p.y += vy + gravity;
+            let vx = p.x - p.oldX;
+            let vy = p.y - p.oldY;
+            p.oldX = p.x; p.oldY = p.y;
+            p.x += vx; p.y += vy + gravity;
 
-                if (p.y > 160) {
-                    p.y = 160;
-                    p.oldY = p.y + vy * bounce;
-                }
-                if (p.x > canvas.width) { p.x = canvas.width; p.oldX = p.x + vx * bounce; }
-                if (p.x < 0) { p.x = 0; p.oldX = p.x + vx * bounce; }
-            }
+            // Пол шахты на 160px
+            if (p.y > 160) { p.y = 160; p.oldY = p.y + vy * bounce; }
+            if (p.x > canvas.width) { p.x = canvas.width; p.oldX = p.x + vx * bounce; }
+            if (p.x < 0) { p.x = 0; p.oldX = p.x + vx * bounce; }
         });
 
         for (let i = 0; i < 10; i++) {
             constraints.forEach(c => {
-                let p1 = points[c.p1];
-                let p2 = points[c.p2];
-                let dx = p2.x - p1.x;
-                let dy = p2.y - p1.y;
+                let p1 = points[c.p1]; let p2 = points[c.p2];
+                let dx = p2.x - p1.x; let dy = p2.y - p1.y;
                 let dist = Math.hypot(dx, dy);
                 if (dist === 0) dist = 1;
                 let diff = c.length - dist;
                 let percent = diff / dist / 2;
-                let offsetX = dx * percent;
-                let offsetY = dy * percent;
-
-                if (!p1.pinned) { p1.x -= offsetX; p1.y -= offsetY; }
-                if (!p2.pinned) { p2.x += offsetX; p2.y += offsetY; }
+                let offsetX = dx * percent; let offsetY = dy * percent;
+                p1.x -= offsetX; p1.y -= offsetY;
+                p2.x += offsetX; p2.y += offsetY;
             });
         }
     }
 
     function gameLoop() {
-        updatePhysics();
-
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#0a0d12"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-
         ctx.fillStyle = "#2c3540"; ctx.fillRect(0, 168, canvas.width, 72);
 
-        if (sprites.tail.complete) { ctx.drawImage(sprites.tail, points[3].x - 12, points[3].y - 12, 24, 24); }
-        if (sprites.upArm.complete && sprites.handB.complete) {
-            ctx.drawImage(sprites.upArm, points[10].x - 6, points[10].y - 6, 12, 14);
-            ctx.drawImage(sprites.handB, points[10].x - 5, points[10].y + 6, 10, 10);
-        }
-        if (sprites.thigh.complete && sprites.crus.complete && sprites.foot.complete) {
-            ctx.drawImage(sprites.thigh, points[4].x - 6, points[4].y - 6, 12, 14);
-            ctx.drawImage(sprites.crus, points[5].x - 5, points[5].y - 6, 10, 14);
-            ctx.drawImage(sprites.foot, points[6].x - 6, points[6].y - 4, 12, 6);
-        }
-        if (sprites.downTorso.complete) { ctx.drawImage(sprites.downTorso, points[2].x - 12, points[2].y - 7, 24, 14); }
-        if (sprites.upTorso.complete) { ctx.drawImage(sprites.upTorso, points[1].x - 12, points[1].y - 8, 24, 16); }
-
-        ctx.fillStyle = "#1e222a";
-        ctx.fillRect((points[0].x + points[1].x)/2 - 2, (points[0].y + points[1].y)/2 - 1, 4, 3);
-
-        if (sprites.head.complete) { ctx.drawImage(sprites.head, points[0].x - 12, points[0].y - 8, 24, 16); }
-        if (sprites.eyeOpen.complete) {
-            ctx.shadowBlur = 10; ctx.shadowColor = "#ff3399";
-            ctx.drawImage(sprites.eyeOpen, points[0].x + 2, points[0].y - 3, 6, 6);
-            ctx.shadowBlur = 0;
-        }
-        if (sprites.thigh.complete && sprites.crus.complete && sprites.foot.complete) {
-            ctx.drawImage(sprites.thigh, points[7].x - 6, points[7].y - 6, 12, 14);
-            ctx.drawImage(sprites.crus, points[8].x - 5, points[8].y - 6, 10, 14);
-            ctx.drawImage(sprites.foot, points[9].x - 6, points[9].y - 4, 12, 6);
-        }
-        if (sprites.downArm.complete && sprites.handF.complete) {
-            ctx.drawImage(sprites.downArm, points[11].x - 6, points[11].y - 6, 12, 14);
-            ctx.drawImage(sprites.handF, points[11].x - 5, points[11].y + 6, 10, 10);
+        if (!player.isRagdoll) {
+            if (keys["ArrowRight"] && player.x < canvas.width - 50) {
+                player.x += player.speed; player.direction = "right"; animTime++;
+            }
+            if (keys["ArrowLeft"] && player.x > 10) {
+                player.x -= player.speed; player.direction = "left"; animTime++;
+            }
+            drawWalkingExpie(player.x, player.y);
+        } else {
+            updatePhysics();
+            if (sprites.tail.complete) ctx.drawImage(sprites.tail, points[3].x - 12, points[3].y - 12, 24, 24);
+            if (sprites.upArm.complete && sprites.handB.complete) {
+                ctx.drawImage(sprites.upArm, points[10].x - 6, points[10].y - 6, 12, 14);
+                ctx.drawImage(sprites.handB, points[10].x - 5, points[10].y + 6, 10, 10);
+            }
+            if (sprites.thigh.complete && sprites.crus.complete && sprites.foot.complete) {
+                ctx.drawImage(sprites.thigh, points[4].x - 6, points[4].y - 6, 12, 14);
+                ctx.drawImage(sprites.crus, points[5].x - 5, points[5].y - 6, 10, 14);
+                ctx.drawImage(sprites.foot, points[6].x - 6, points[6].y - 4, 12, 6);
+            }
+            if (sprites.downTorso.complete) ctx.drawImage(sprites.downTorso, points[2].x - 12, points[2].y - 7, 24, 14);
+            if (sprites.upTorso.complete) ctx.drawImage(sprites.upTorso, points[1].x - 12, points[1].y - 8, 24, 16);
+            
+            ctx.fillStyle = "#1e222a"; ctx.fillRect((points[0].x + points[1].x)/2 - 2, (points[0].y + points[1].y)/2 - 1, 4, 3);
+            
+            if (sprites.head.complete) ctx.drawImage(sprites.head, points[0].x - 12, points[0].y - 8, 24, 16);
+            if (sprites.eyeOpen.complete) {
+                ctx.shadowBlur = 10; ctx.shadowColor = "#ff3399";
+                ctx.drawImage(sprites.eyeOpen, points[0].x + 2, points[0].y - 3, 6, 6);
+                ctx.shadowBlur = 0;
+            }
+            if (sprites.thigh.complete && sprites.crus.complete && sprites.foot.complete) {
+                ctx.drawImage(sprites.thigh, points[7].x - 6, points[7].y - 6, 12, 14);
+                ctx.drawImage(sprites.crus, points[8].x - 5, points[8].y - 6, 10, 14);
+                ctx.drawImage(sprites.foot, points[9].x - 6, points[9].y - 4, 12, 6);
+            }
+            if (sprites.downArm.complete && sprites.handF.complete) {
+                ctx.drawImage(sprites.downArm, points[11].x - 6, points[11].y - 6, 12, 14);
+                ctx.drawImage(sprites.handF, points[11].x - 5, points[11].y + 6, 10, 10);
+            }
         }
 
         requestAnimationFrame(gameLoop);
