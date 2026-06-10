@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCAV: CASUALTIES UNKNOWN СБОРКА</title>
+    <title>SCAV: CASUALTIES UNKNOWN RAGDOLL</title>
     <style>
         body {
             background-color: #080a0c;
@@ -49,7 +49,9 @@
             display: block;
             margin: 0 auto 15px auto;
             border-radius: 4px;
+            cursor: grab;
         }
+        #gameCanvas:active { cursor: grabbing; }
 
         .stats { display: flex; justify-content: space-between; margin-bottom: 10px; background: #181d26; padding: 10px; border-radius: 4px; border: 1px solid #222933; font-size: 14px; }
         .log { height: 75px; background-color: #090b0e; border: 1px solid #222933; padding: 10px; overflow-y: auto; font-size: 13px; margin-bottom: 15px; border-radius: 4px; color: #8b949e; }
@@ -64,11 +66,11 @@
     <canvas id="gameCanvas" width="500" height="240"></canvas>
 
     <div class="stats">
-        <div>Тест пропорций: <span style="color: #ff3366;">Шея 3 пикселя</span></div>
-        <div>Ходьба: <b>← → (Стрелочки)</b></div>
+        <div>Режим физики: <span style="color: #ff3366;">Рэгдолл (Ragdoll)</span></div>
+        <div>Управление: <b>Зажми мышку на Expie и тяни!</b></div>
     </div>
     
-    <div id="log" class="log">> Синхронизация суставов скафандра Expie...</div>
+    <div id="log" class="log">> Активация физических суставов марионетки... Зажми ЛКМ на Expie и крути его!</div>
 </div>
 <script>
     const canvas = document.getElementById("gameCanvas");
@@ -80,20 +82,11 @@
         logEl.scrollTop = logEl.scrollHeight;
     }
 
-    // Загрузка твоих картинок
     const sprites = {
-        head: new Image(),
-        eyeOpen: new Image(),
-        upTorso: new Image(),
-        downTorso: new Image(),
-        tail: new Image(),
-        thigh: new Image(),
-        crus: new Image(),
-        foot: new Image(),
-        upArm: new Image(),
-        downArm: new Image(),
-        handB: new Image(),
-        handF: new Image()
+        head: new Image(), eyeOpen: new Image(), upTorso: new Image(),
+        downTorso: new Image(), tail: new Image(), thigh: new Image(),
+        crus: new Image(), foot: new Image(), upArm: new Image(),
+        downArm: new Image(), handB: new Image(), handF: new Image()
     };
 
     sprites.head.src = "experimentHead.png";
@@ -109,124 +102,153 @@
     sprites.handB.src = "experimentHandB.png";
     sprites.handF.src = "experimentHandF.png";
 
-    let loadedCount = 0;
-    const totalSprites = Object.keys(sprites).length;
+    let points = [
+        { x: 250, y: 40, oldX: 250, oldY: 40, pinned: false },       
+        { x: 250, y: 65, oldX: 250, oldY: 65, pinned: false },       
+        { x: 250, y: 90, oldX: 250, oldY: 90, pinned: false },       
+        { x: 232, y: 98, oldX: 232, oldY: 98, pinned: false },       
+        { x: 246, y: 104, oldX: 246, oldY: 104, pinned: false },     
+        { x: 246, y: 118, oldX: 246, oldY: 118, pinned: false },     
+        { x: 242, y: 130, oldX: 242, oldY: 130, pinned: false },     
+        { x: 254, y: 104, oldX: 254, oldY: 104, pinned: false },     
+        { x: 254, y: 118, oldX: 254, oldY: 118, pinned: false },     
+        { x: 258, y: 130, oldX: 258, oldY: 130, pinned: false },     
+        { x: 238, y: 76, oldX: 238, oldY: 76, pinned: false },       
+        { x: 262, y: 76, oldX: 262, oldY: 76, pinned: false }        
+    ];
 
-    for (let key in sprites) {
-        sprites[key].onload = () => {
-            loadedCount++;
-            if (loadedCount === totalSprites) {
-                log("✅ Все оригинальные спрайты успешно состыкованы!");
-            }
-        };
+    let constraints = [
+        { p1: 0, p2: 1, length: 22 },  
+        { p1: 1, p2: 2, length: 20 },  
+        { p1: 2, p2: 3, length: 16 },  
+        { p1: 2, p2: 4, length: 14 },  
+        { p1: 4, p2: 5, length: 14 },  
+        { p1: 5, p2: 6, length: 10 },  
+        { p1: 2, p2: 7, length: 14 },  
+        { p1: 7, p2: 8, length: 14 },  
+        { p1: 8, p2: 9, length: 10 },  
+        { p1: 1, p2: 10, length: 14 }, 
+        { p1: 1, p2: 11, length: 14 }  
+    ];
+
+    const gravity = 0.35;
+    const bounce = 0.4;
+    let isDragging = false;
+    let dragPoint = null;
+
+    function getMousePos(canvas, evt) {
+        let rect = canvas.getBoundingClientRect();
+        return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
     }
 
-    let player = {
-        x: 220,
-        y: 60,
-        speed: 3,
-        direction: "right"
-    };
+    canvas.addEventListener("mousedown", (e) => {
+        let mouse = getMousePos(canvas, e);
+        points.forEach(p => {
+            let dist = Math.hypot(p.x - mouse.x, p.y - mouse.y);
+            if (dist < 22) {
+                isDragging = true;
+                dragPoint = p;
+                p.pinned = true;
+            }
+        });
+    });
 
-    let keys = {};
-    window.addEventListener("keydown", (e) => { keys[e.key] = true; });
-    window.addEventListener("keyup", (e) => { keys[e.key] = false; });
-
-    let animTime = 0;
-</script>
-<script>
-    function drawAssembledExpie(x, y) {
-        let legSwing = Math.sin(animTime * 0.15) * 6;
-        let armSwing = Math.cos(animTime * 0.15) * 4;
-
-        if (!keys["ArrowRight"] && !keys["ArrowLeft"]) {
-            legSwing = 0; armSwing = 0;
+    canvas.addEventListener("mousemove", (e) => {
+        if (isDragging && dragPoint) {
+            let mouse = getMousePos(canvas, e);
+            dragPoint.x = mouse.x;
+            dragPoint.y = mouse.y;
+            dragPoint.oldX = mouse.x;
+            dragPoint.oldY = mouse.y;
         }
+    });
 
-        ctx.save();
-        if (player.direction === "left") {
-            ctx.translate(x + 25, y);
-            ctx.scale(-1, 1);
-            ctx.translate(-x - 25, -y);
+    window.addEventListener("mouseup", () => {
+        if (isDragging && dragPoint) {
+            dragPoint.pinned = false;
+            isDragging = false;
+            dragPoint = null;
         }
+    });
 
-        let sitY = y + 25; 
+    function updatePhysics() {
+        points.forEach(p => {
+            if (!p.pinned) {
+                let vx = p.x - p.oldX;
+                let vy = p.y - p.oldY;
+                p.oldX = p.x;
+                p.oldY = p.y;
+                p.x += vx;
+                p.y += vy + gravity;
 
-        // 1. Хвост
-        if (sprites.tail.complete) {
-            ctx.drawImage(sprites.tail, x - 18, sitY + 28, 24, 24);
+                if (p.y > 160) {
+                    p.y = 160;
+                    p.oldY = p.y + vy * bounce;
+                }
+                if (p.x > canvas.width) { p.x = canvas.width; p.oldX = p.x + vx * bounce; }
+                if (p.x < 0) { p.x = 0; p.oldX = p.x + vx * bounce; }
+            }
+        });
+
+        for (let i = 0; i < 10; i++) {
+            constraints.forEach(c => {
+                let p1 = points[c.p1];
+                let p2 = points[c.p2];
+                let dx = p2.x - p1.x;
+                let dy = p2.y - p1.y;
+                let dist = Math.hypot(dx, dy);
+                if (dist === 0) dist = 1;
+                let diff = c.length - dist;
+                let percent = diff / dist / 2;
+                let offsetX = dx * percent;
+                let offsetY = dy * percent;
+
+                if (!p1.pinned) { p1.x -= offsetX; p1.y -= offsetY; }
+                if (!p2.pinned) { p2.x += offsetX; p2.y += offsetY; }
+            });
         }
-
-        // 2. Задняя рука
-        if (sprites.upArm.complete && sprites.handB.complete) {
-            ctx.drawImage(sprites.upArm, x + 8 - armSwing * 0.2, sitY + 12, 16, 12);
-            ctx.drawImage(sprites.handB, x + 18 - armSwing * 0.4, sitY + 16, 10, 10);
-        }
-
-        // 3. Задняя нога
-        if (sprites.thigh.complete && sprites.crus.complete && sprites.foot.complete) {
-            let backLegOffset = legSwing;
-            ctx.drawImage(sprites.thigh, x - 2 + backLegOffset * 0.2, sitY + 26, 16, 12);
-            ctx.drawImage(sprites.crus, x + 4 + backLegOffset * 0.4, sitY + 32, 12, 14);
-            ctx.drawImage(sprites.foot, x + 6 + backLegOffset, sitY + 42, 14, 8);
-        }
-
-        // 4. Таз
-        if (sprites.downTorso.complete) {
-            ctx.drawImage(sprites.downTorso, x - 4, sitY + 22, 26, 14);
-        }
-
-        // 5. Грудь
-        if (sprites.upTorso.complete) {
-            ctx.drawImage(sprites.upTorso, x, sitY + 10, 26, 16);
-        }
-
-        // 6. Шея (Ровно 3 пикселя в высоту!)
-        ctx.fillStyle = "#1e222a";
-        ctx.fillRect(x + 10, sitY + 7, 6, 3); 
-
-        // 7. Голова
-        if (sprites.head.complete) {
-            ctx.drawImage(sprites.head, x + 4, sitY - 5, 24, 16);
-        }
-
-        // 8. Розовый глаз
-        if (sprites.eyeOpen.complete) {
-            ctx.shadowBlur = 10; ctx.shadowColor = "#ff3399";
-            ctx.drawImage(sprites.eyeOpen, x + 16, sitY + 1, 6, 6);
-            ctx.shadowBlur = 0;
-        }
-
-        // 9. Передняя нога
-        if (sprites.thigh.complete && sprites.crus.complete && sprites.foot.complete) {
-            let frontLegOffset = -legSwing;
-            ctx.drawImage(sprites.thigh, x + 2 + frontLegOffset * 0.2, sitY + 26, 16, 12);
-            ctx.drawImage(sprites.crus, x + 8 + frontLegOffset * 0.4, sitY + 32, 12, 14);
-            ctx.drawImage(sprites.foot, x + 12 + frontLegOffset, sitY + 42, 14, 8);
-        }
-
-        // 10. Передняя рука
-        if (sprites.downArm.complete && sprites.handF.complete) {
-            ctx.drawImage(sprites.downArm, x + 12 + armSwing * 0.2, sitY + 12, 16, 12);
-            ctx.drawImage(sprites.handF, x + 24 + armSwing * 0.4, sitY + 16, 10, 10);
-        }
-
-        ctx.restore();
     }
 
     function gameLoop() {
+        updatePhysics();
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#0a0d12"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#2c3540"; ctx.fillRect(0, 140, canvas.width, 100);
 
-        if (keys["ArrowRight"] && player.x < canvas.width - 40) {
-            player.x += player.speed; player.direction = "right"; animTime++;
+        ctx.fillStyle = "#2c3540"; ctx.fillRect(0, 168, canvas.width, 72);
+
+        if (sprites.tail.complete) { ctx.drawImage(sprites.tail, points[3].x - 12, points[3].y - 12, 24, 24); }
+        if (sprites.upArm.complete && sprites.handB.complete) {
+            ctx.drawImage(sprites.upArm, points[10].x - 6, points[10].y - 6, 12, 14);
+            ctx.drawImage(sprites.handB, points[10].x - 5, points[10].y + 6, 10, 10);
         }
-        if (keys["ArrowLeft"] && player.x > 20) {
-            player.x -= player.speed; player.direction = "left"; animTime++;
+        if (sprites.thigh.complete && sprites.crus.complete && sprites.foot.complete) {
+            ctx.drawImage(sprites.thigh, points[4].x - 6, points[4].y - 6, 12, 14);
+            ctx.drawImage(sprites.crus, points[5].x - 5, points[5].y - 6, 10, 14);
+            ctx.drawImage(sprites.foot, points[6].x - 6, points[6].y - 4, 12, 6);
+        }
+        if (sprites.downTorso.complete) { ctx.drawImage(sprites.downTorso, points[2].x - 12, points[2].y - 7, 24, 14); }
+        if (sprites.upTorso.complete) { ctx.drawImage(sprites.upTorso, points[1].x - 12, points[1].y - 8, 24, 16); }
+
+        ctx.fillStyle = "#1e222a";
+        ctx.fillRect((points[0].x + points[1].x)/2 - 2, (points[0].y + points[1].y)/2 - 1, 4, 3);
+
+        if (sprites.head.complete) { ctx.drawImage(sprites.head, points[0].x - 12, points[0].y - 8, 24, 16); }
+        if (sprites.eyeOpen.complete) {
+            ctx.shadowBlur = 10; ctx.shadowColor = "#ff3399";
+            ctx.drawImage(sprites.eyeOpen, points[0].x + 2, points[0].y - 3, 6, 6);
+            ctx.shadowBlur = 0;
+        }
+        if (sprites.thigh.complete && sprites.crus.complete && sprites.foot.complete) {
+            ctx.drawImage(sprites.thigh, points[7].x - 6, points[7].y - 6, 12, 14);
+            ctx.drawImage(sprites.crus, points[8].x - 5, points[8].y - 6, 10, 14);
+            ctx.drawImage(sprites.foot, points[9].x - 6, points[9].y - 4, 12, 6);
+        }
+        if (sprites.downArm.complete && sprites.handF.complete) {
+            ctx.drawImage(sprites.downArm, points[11].x - 6, points[11].y - 6, 12, 14);
+            ctx.drawImage(sprites.handF, points[11].x - 5, points[11].y + 6, 10, 10);
         }
 
-        drawAssembledExpie(player.x, player.y);
         requestAnimationFrame(gameLoop);
     }
 
