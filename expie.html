@@ -64,13 +64,12 @@
     <canvas id="gameCanvas" width="500" height="240"></canvas>
 
     <div class="stats">
-        <div>Точная калибровка: <span style="color: #ff3366;">Ровный Expie</span></div>
+        <div>Тест пропорций: <span style="color: #ff3366;">Шея 3 пикселя</span></div>
         <div>Ходьба: <b>← → (Стрелочки)</b></div>
     </div>
     
-    <div id="log" class="log">> Подгонка координат суставов...</div>
+    <div id="log" class="log">> Синхронизация суставов скафандра Expie...</div>
 </div>
-
 <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
@@ -81,7 +80,7 @@
         logEl.scrollTop = logEl.scrollHeight;
     }
 
-    // Подключаем все текстуры
+    // Загрузка твоих картинок
     const sprites = {
         head: new Image(),
         eyeOpen: new Image(),
@@ -117,14 +116,14 @@
         sprites[key].onload = () => {
             loadedCount++;
             if (loadedCount === totalSprites) {
-                log("✅ Коррекция завершена! Все части тела соединены ровно.");
+                log("✅ Все оригинальные спрайты успешно состыкованы!");
             }
         };
     }
 
     let player = {
         x: 220,
-        y: 60, // Сместили базу повыше для удобства расчетов
+        y: 60,
         speed: 3,
         direction: "right"
     };
@@ -134,10 +133,11 @@
     window.addEventListener("keyup", (e) => { keys[e.key] = false; });
 
     let animTime = 0;
-
+</script>
+<script>
     function drawAssembledExpie(x, y) {
-        let legSwing = Math.sin(animTime * 0.15) * 8;
-        let armSwing = Math.cos(animTime * 0.15) * 6;
+        let legSwing = Math.sin(animTime * 0.15) * 6;
+        let armSwing = Math.cos(animTime * 0.15) * 4;
 
         if (!keys["ArrowRight"] && !keys["ArrowLeft"]) {
             legSwing = 0; armSwing = 0;
@@ -150,59 +150,65 @@
             ctx.translate(-x - 25, -y);
         }
 
-        // 1. ХВОСТ (Теперь прижат вплотную к тазу сзади)
+        let sitY = y + 25; 
+
+        // 1. Хвост
         if (sprites.tail.complete) {
-            ctx.drawImage(sprites.tail, x - 12, y + 42 + Math.sin(animTime * 0.1) * 2, 24, 24);
+            ctx.drawImage(sprites.tail, x - 18, sitY + 28, 24, 24);
         }
 
-        // 2. ЗАДНЯЯ РУКА (Корректные координаты слоев)
+        // 2. Задняя рука
         if (sprites.upArm.complete && sprites.handB.complete) {
-            ctx.drawImage(sprites.upArm, x - 2 - armSwing * 0.2, y + 25, 14, 14);
-            ctx.drawImage(sprites.handB, x - 4 - armSwing * 0.4, y + 36, 10, 10);
+            ctx.drawImage(sprites.upArm, x + 8 - armSwing * 0.2, sitY + 12, 16, 12);
+            ctx.drawImage(sprites.handB, x + 18 - armSwing * 0.4, sitY + 16, 10, 10);
         }
 
-        // 3. ЗАДНЯЯ НОГА
+        // 3. Задняя нога
         if (sprites.thigh.complete && sprites.crus.complete && sprites.foot.complete) {
             let backLegOffset = legSwing;
-            ctx.drawImage(sprites.thigh, x + 2 + backLegOffset * 0.2, y + 50, 14, 14);
-            ctx.drawImage(sprites.crus, x + 2 + backLegOffset * 0.4, y + 62, 12, 14);
-            ctx.drawImage(sprites.foot, x + backLegOffset, y + 74, 14, 8);
+            ctx.drawImage(sprites.thigh, x - 2 + backLegOffset * 0.2, sitY + 26, 16, 12);
+            ctx.drawImage(sprites.crus, x + 4 + backLegOffset * 0.4, sitY + 32, 12, 14);
+            ctx.drawImage(sprites.foot, x + 6 + backLegOffset, sitY + 42, 14, 8);
         }
 
-        // 4. ТАЗ (DownTorso — основа нижней части)
+        // 4. Таз
         if (sprites.downTorso.complete) {
-            ctx.drawImage(sprites.downTorso, x + 2, y + 38, 26, 16);
+            ctx.drawImage(sprites.downTorso, x - 4, sitY + 22, 26, 14);
         }
 
-        // 5. ГРУДЬ (UpTorso — ставится ровно поверх таза)
+        // 5. Грудь
         if (sprites.upTorso.complete) {
-            ctx.drawImage(sprites.upTorso, x, y + 20, 28, 20);
+            ctx.drawImage(sprites.upTorso, x, sitY + 10, 26, 16);
         }
 
-        // 6. ГОЛОВА (Опустили ниже, убрав пустой зазор в шее)
+        // 6. Шея (Ровно 3 пикселя в высоту!)
+        ctx.fillStyle = "#1e222a";
+        ctx.fillRect(x + 10, sitY + 7, 6, 3); 
+
+        // 7. Голова
         if (sprites.head.complete) {
-            ctx.drawImage(sprites.head, x + 2, y + 4, 24, 18);
+            ctx.drawImage(sprites.head, x + 4, sitY - 5, 24, 16);
         }
 
-        // 7. СВЕТЯЩИЙСЯ РОЗОВЫЙ ГЛАЗ (Точно в центр визора головы)
+        // 8. Розовый глаз
         if (sprites.eyeOpen.complete) {
             ctx.shadowBlur = 10; ctx.shadowColor = "#ff3399";
-            ctx.drawImage(sprites.eyeOpen, x + 14, y + 10, 6, 6);
+            ctx.drawImage(sprites.eyeOpen, x + 16, sitY + 1, 6, 6);
             ctx.shadowBlur = 0;
         }
 
-        // 8. ПЕРЕДНЯЯ НОГА
+        // 9. Передняя нога
         if (sprites.thigh.complete && sprites.crus.complete && sprites.foot.complete) {
             let frontLegOffset = -legSwing;
-            ctx.drawImage(sprites.thigh, x + 10 + frontLegOffset * 0.2, y + 50, 14, 14);
-            ctx.drawImage(sprites.crus, x + 10 + frontLegOffset * 0.4, y + 62, 12, 14);
-            ctx.drawImage(sprites.foot, x + 8 + frontLegOffset, y + 74, 14, 8);
+            ctx.drawImage(sprites.thigh, x + 2 + frontLegOffset * 0.2, sitY + 26, 16, 12);
+            ctx.drawImage(sprites.crus, x + 8 + frontLegOffset * 0.4, sitY + 32, 12, 14);
+            ctx.drawImage(sprites.foot, x + 12 + frontLegOffset, sitY + 42, 14, 8);
         }
 
-        // 9. ПЕРЕДНЯЯ РУКА (DownArm + HandF — поверх груди)
+        // 10. Передняя рука
         if (sprites.downArm.complete && sprites.handF.complete) {
-            ctx.drawImage(sprites.downArm, x + 14 + armSwing * 0.2, y + 25, 14, 14);
-            ctx.drawImage(sprites.handF, x + 14 + armSwing * 0.4, y + 36, 10, 10);
+            ctx.drawImage(sprites.downArm, x + 12 + armSwing * 0.2, sitY + 12, 16, 12);
+            ctx.drawImage(sprites.handF, x + 24 + armSwing * 0.4, sitY + 16, 10, 10);
         }
 
         ctx.restore();
@@ -210,27 +216,17 @@
 
     function gameLoop() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.fillStyle = "#0a0d12";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Подняли уровень пола под новые ровные ноги
-        ctx.fillStyle = "#2c3540";
-        ctx.fillRect(0, 140, canvas.width, 100);
+        ctx.fillStyle = "#0a0d12"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#2c3540"; ctx.fillRect(0, 140, canvas.width, 100);
 
         if (keys["ArrowRight"] && player.x < canvas.width - 40) {
-            player.x += player.speed;
-            player.direction = "right";
-            animTime++;
+            player.x += player.speed; player.direction = "right"; animTime++;
         }
         if (keys["ArrowLeft"] && player.x > 20) {
-            player.x -= player.speed;
-            player.direction = "left";
-            animTime++;
+            player.x -= player.speed; player.direction = "left"; animTime++;
         }
 
         drawAssembledExpie(player.x, player.y);
-
         requestAnimationFrame(gameLoop);
     }
 
