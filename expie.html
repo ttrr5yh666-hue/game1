@@ -23,9 +23,26 @@
             border-radius: 6px;
             padding: 20px;
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+            position: relative;
         }
         h1 { text-align: center; color: #ff3366; font-size: 18px; margin-top: 0; letter-spacing: 3px; }
         
+        .back-to-menu {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            background: #181d26;
+            color: #8b949e;
+            border: 1px solid #222933;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-to-menu:hover { border-color: #ff3366; color: #fff; }
+
         #gameCanvas {
             background-color: #040507;
             border: 2px solid #222933;
@@ -46,355 +63,7 @@
 <body>
 
 <div class="game-container">
-    <h1>SCAV: CASUALTIES UNKNOWN (PLATFORMS)</h1>
-    
-    <canvas id="gameCanvas" width="500" height="240"></canvas>
-
-    <div class="stats">
-        <div>Метры: <span id="progress">0</span> / 2000м</div>
-        <div>Корпус: <span id="hp">100</span>%</div>
-        <div>Мины: <span id="mines">2</span>💥</div>
-    </div>
-
-    <div class="stats" style="font-size: 12px; color: #8b949e;">
-        <div>Титан: <span id="titan">0</span></div>
-        <div>Порох: <span id="gunpowder">1</span></div>
-        <div>Управление: <b>← → (Ходьба) | ↑ ↓ (Платформы)</b></div>
-    </div>
-
-    <div id="bleed-warn" class="warning">⚠️ ОРАНЖЕВОЕ КРОВОТЕЧЕНИЕ! Каждый шаг отнимает HP!</div>
-    
-    <div id="log" class="log">Системы сканирования шлема запущены. Картинка Expie загружается...</div>
-
-    <div class="actions">
-        <button onclick="rechargeBattery()">Лечение (1 тит.)</button>
-        <button onclick="craftMine()">Скрафтить мину (1 пор. + 1 тит.)</button>
-    </div>
-</div>
-<script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-
-    let hp = 100;
-    let depth = 0;
-    const maxDepth = 2000; 
-    let leak = false; 
-    let gameOver = false;
-    let inventory = { titan: 0, gunpowder: 1, mines: 2 };
-
-    const blockSize = 20;
-    const topFloorY = 55;
-    const bottomFloorY = 135;
-
-    // Хранилище для капель оранжевой крови на блоках
-    let bloodDrops = [];
-
-    let player = {
-        x: 50,
-        y: topFloorY, 
-        width: 25,
-        height: 55,
-        speed: 4,
-        currentFloor: "top"
-    };
-
-    let gameObjects = [
-        { x: 300, y: "top", type: "titan", icon: "💎", active: true },
-        { x: 550, y: "bottom", type: "glass", icon: "💠", active: true },
-        { x: 800, y: "top", type: "trap", icon: "💥", active: true },
-        { x: 1100, y: "bottom", type: "enemy", icon: "👾", active: true },
-        { x: 1350, y: "top", type: "titan", icon: "💎", active: true },
-        { x: 1550, y: "bottom", type: "trap", icon: "💥", active: true },
-        { x: 1750, y: "top", type: "enemy", icon: "👾", active: true },
-        { x: maxDepth, y: "bottom", type: "exit", icon: "🚪", active: true } 
-    ];
-
-    const logEl = document.getElementById('log');
-    function log(text) {
-        logEl.innerHTML += `<br>${text}`;
-        logEl.scrollTop = logEl.scrollHeight;
-    }
-
-    // Инициализация лога без ошибок загрузки картинок
-    setTimeout(() => {
-        log("✅ Костюм Expie полностью откалиброван! Ошибки текстур устранены.");
-    }, 500);
-
-    let keys = {};
-    window.addEventListener("keydown", (e) => { 
-        keys[e.key] = true; 
-        
-        if (!gameOver) {
-            if (e.key === "ArrowDown" && player.currentFloor === "top") {
-                player.y = bottomFloorY;
-                player.currentFloor = "bottom";
-                log("⬇️ Expie перепрыгнул на нижний ярус.");
-            } else if (e.key === "ArrowUp" && player.currentFloor === "bottom") {
-                player.y = topFloorY;
-                player.currentFloor = "top";
-                log("⬆️ Expie поднялся на верхние платформы.");
-            }
-        }
-    });
-    window.addEventListener("keyup", (e) => { keys[e.key] = false; });
-
-    function updateUI() {
-        document.getElementById('hp').innerText = hp;
-        document.getElementById('progress').innerText = Math.min(maxDepth, Math.floor(depth));
-        document.getElementById('mines').innerText = inventory.mines;
-        document.getElementById('titan').innerText = inventory.titan;
-        document.getElementById('gunpowder').innerText = inventory.gunpowder;
-        document.getElementById('bleed-warn').style.display = leak ? 'block' : 'none';
-
-        if (hp <= 0 && !gameOver) {
-            gameOver = true;
-            log("<b style='color:#ff3333;'>💀 КРИТИЧЕСКИЙ СБОЙ: Жизненные показатели Expie на нулю.</b>");
-        }
-    }
-
-    function checkCollisions() {
-        gameObjects.forEach(obj => {
-            if (obj.active && Math.abs(player.x - obj.x) < 25 && player.currentFloor === obj.y) {
-                if (obj.type === "exit") {
-                    gameOver = true;
-                    log("<b style='color:#00ff00;'>🎉 МИССИЯ ВЫПОЛНЕНА! Expie спасся на лифте!</b>");
-                    return;
-                }
-
-                obj.active = false;
-                if (obj.type === "titan") {
-                    inventory.titan++;
-                    log("💎 Найден Титан.");
-                } else if (obj.type === "glass") {
-                    hp -= 15;
-                    log("💠 Хруст! Стекло разрезало лапу скафандра (-15 HP).");
-                } else if (obj.type === "trap") {
-                    if (inventory.mines > 0) {
-                        inventory.mines--;
-                        log("💥 Ловушка уничтожена броском мины-липучки!");
-                    } else {
-                        hp -= 35; leak = true;
-                        log("<b style='color:#ff5500;'>💥 БАБАХ! Подоpвался на мине! Началось ОРАНЖЕВОЕ КРОВОТЕЧЕНИЕ!</b>");
-                    }
-                } else if (obj.type === "enemy") {
-                    if (inventory.mines > 0) {
-                        inventory.mines--;
-                        log("👾 Мутант уничтожен взрывом липучки!");
-                    } else {
-                        hp -= 30; leak = true;
-                        log("⚔️ Тяжелый ближний бой! Мутант убит, у Expie открылось кровотечение (-30 HP).");
-                    }
-                }
-                updateUI();
-            }
-        });
-    }
-
-    function drawBlocks(offsetX) {
-        ctx.fillStyle = "#2c3540"; 
-        ctx.strokeStyle = "#161b22"; 
-        ctx.lineWidth = 1;
-
-        for (let col = 0; col < canvas.width / blockSize + 10; col++) {
-            let blockX = (col * blockSize) + (offsetX % blockSize) - blockSize;
-            
-            for (let row = 0; row < 1; row++) {
-                let blockY = 110 + (row * blockSize);
-                ctx.fillRect(blockX, blockY, blockSize, blockSize);
-                ctx.strokeRect(blockX, blockY, blockSize, blockSize);
-            }
-
-            for (let row = 0; row < 2; row++) {
-                let blockY = 190 + (row * blockSize);
-                ctx.fillRect(blockX, blockY, blockSize, blockSize);
-                ctx.strokeRect(blockX, blockY, blockSize, blockSize);
-            }
-        }
-    }
-
-    function drawBlood(offsetX) {
-        ctx.fillStyle = "#ff6600"; 
-        bloodDrops.forEach(drop => {
-            ctx.fillRect(drop.x + offsetX, drop.y, 4, 4);
-        });
-    }
-
-    // НОВОЕ: Точная прорисовка Фурри Expie кодом по твоей фотографии
-    function drawFurryExpie(x, y) {
-        // 1. Тонкие лапы (ноги)
-        ctx.fillStyle = "#1e222a";
-        ctx.fillRect(x + 6, y + 42, 3, 13);
-        ctx.fillRect(x + 14, y + 42, 3, 13);
-
-        // 2. БОЛЬШОЙ ПУШИСТЫЙ ХВОСТ сзади (розовато-бежевый, как на фото)
-        ctx.fillStyle = "#e8c3b9";
-        ctx.beginPath();
-        ctx.arc(x - 4, y + 32, 10, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillRect(x - 10, y + 28, 8, 12); // Удлинение хвоста вниз
-
-        // 3. Тёмный торс скафандра
-        ctx.fillStyle = "#2d3542";
-        ctx.fillRect(x + 2, y + 16, 18, 26);
-
-        // 4. ДЛИННАЯ ВЫТЯНУТАЯ ШЕЯ (главная фишка Expie)
-        ctx.fillStyle = "#212731";
-        ctx.fillRect(x + 6, y, 9, 18);
-
-        // 5. Голова шлема с ушками на затылке
-        ctx.fillStyle = "#2d3542";
-        ctx.fillRect(x + 4, y - 6, 15, 12); // Основа головы
-        ctx.fillRect(x + 1, y - 8, 5, 5);   // Острое ушко/нарост сзади
-
-        // 6. СВЕТЯЩИЙСЯ РОЗОВЫЙ ВИЗОР (Глаз)
-        ctx.fillStyle = "#ffb3d1";
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = "#ff3399";
-        ctx.fillRect(x + 12, y - 3, 5, 5); // Сам визор шлема
-        ctx.shadowBlur = 0; // Отключаем свечение для остальных объектов
-    }
-
-    function gameLoop() {
-        if (gameOver) return;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = "#0a0d12";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        let isMoving = false;
-
-        if (keys["ArrowRight"] && player.x < maxDepth + 40) {
-            player.x += player.speed;
-            isMoving = true;
-            checkCollisions();
-        }
-        if (keys["ArrowLeft"] && player.x > 30) {
-            player.x -= player.speed;
-            isMoving = true;
-            checkCollisions();
-        }
-
-        if (leak && isMoving && Math.random() < 0.05) {
-            hp -= 1;
-            let bloodY = (player.currentFloor === "top") ? 106 : 186;
-            bloodDrops.push({ x: player.x, y: bloodY + Math.random() * 4 });
-            updateUI();
-        }
-
-        depth = player.x; 
-        updateUI();
-
-        let offsetX = canvas.width / 2 - player.x;
-        if (offsetX > 0) offsetX = 0;
-        if (offsetX < canvas.width - (maxDepth + 100)) offsetX = canvas.width - (maxDepth + 100);
-
-        drawBlocks(offsetX);
-        drawBlood(offsetX);
-
-        ctx.font = "20px Courier New";
-        gameObjects.forEach(obj => {
-            if (obj.active) {
-                let objY = (obj.y === "top") ? topFloorY + 35 : bottomFloorY + 35;
-                ctx.fillText(obj.icon, obj.x + offsetX, objY);
-                
-                if(obj.type === "exit") {
-                    ctx.fillStyle = "#00ff00"; 
-                    ctx.fillRect(obj.x + offsetX + 5, objY - 15, 15, 60);
-                }
-            }
-        });
-
-        ctx.fillStyle = "#ff3366";
-        ctx.font = "12px Courier New";
-        let left = Math.floor(maxDepth - player.x);
-        if (left > 0) {
-            ctx.fillText(`Лифт: Впереди в ${left}м →`, 310, 25);
-        }
-
-        // Рисуем улучшенного фурри Expie кодом
-        drawFurryExpie(player.x + offsetX, player.y);
-
-        requestAnimationFrame(gameLoop);
-    }
-
-    function rechargeBattery() {
-        if (inventory.titan >= 1) {
-            inventory.titan--;
-            hp = Math.min(100, hp + 30);
-            leak = false; 
-            log("🩹 Раны перевязаны, оранжевое кровотечение успешно остановлено.");
-            updateUI();
-        } else {
-            log("❌ Ошибка: Нужен 1 Титан для фиксации ран.");
-        }
-    }
-
-    function craftMine() {
-        if (inventory.gunpowder >= 1 && inventory.titan >= 1) {
-            inventory.gunpowder--;
-            inventory.titan--;
-            inventory.mines++;
-            log("🛠️ Собрана активная мина-липучка.");
-            updateUI();
-        } else {
-            log("❌ Недостаточно components.");
-        }
-    }
-
-    updateUI();
-    gameLoop();
-</script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCAV: CASUALTIES UNKNOWN PLATFORMS</title>
-    <style>
-        body {
-            background-color: #080a0c;
-            color: #d1d7de;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            user-select: none;
-        }
-        .game-container {
-            width: 560px;
-            background-color: #12161c;
-            border: 2px solid #3a4454;
-            border-radius: 6px;
-            padding: 20px;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
-        }
-        h1 { text-align: center; color: #ff3366; font-size: 18px; margin-top: 0; letter-spacing: 3px; }
-        
-        #gameCanvas {
-            background-color: #040507;
-            border: 2px solid #222933;
-            display: block;
-            margin: 0 auto 15px auto;
-            border-radius: 4px;
-        }
-
-        .stats { display: flex; justify-content: space-between; margin-bottom: 10px; background: #181d26; padding: 10px; border-radius: 4px; border: 1px solid #222933; font-size: 14px; }
-        .warning { color: #ff3333; font-weight: bold; text-align: center; margin: 5px 0; display: none; font-size: 13px; }
-        .log { height: 75px; background-color: #090b0e; border: 1px solid #222933; padding: 10px; overflow-y: auto; font-size: 13px; margin-bottom: 15px; border-radius: 4px; color: #8b949e; }
-        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button { background-color: #181d26; color: #c9d1d9; border: 1px solid #222933; padding: 10px; cursor: pointer; border-radius: 4px; font-family: inherit; transition: 0.1s; font-weight: bold; }
-        button:hover { background-color: #222933; border-color: #ff3366; color: #fff; }
-        button:disabled { opacity: 0.2; cursor: not-allowed; }
-    </style>
-</head>
-<body>
-
-<div class="game-container">
+    <a href="index.html" class="back-to-menu">← НА ГЛАВНУЮ</a>
     <h1>SCAV: CASUALTIES UNKNOWN (PLATFORMS)</h1>
     
     <canvas id="gameCanvas" width="500" height="240"></canvas>
@@ -427,15 +96,15 @@
     let hp = 100;
     let depth = 0;
     const maxDepth = 2000; 
-    let leak = false; // Оранжевое кровотечение
-    let legsBroken = false; // Повреждение ног
+    let leak = false; 
+    let legsBroken = false; 
     let gameOver = false;
+    let gameWon = false;
     let inventory = { titan: 0, gunpowder: 1, mines: 2 };
 
     const blockSize = 20;
     const topFloorY = 55;
     const bottomFloorY = 135;
-
     let bloodDrops = [];
 
     let player = {
@@ -447,7 +116,6 @@
         currentFloor: "top"
     };
 
-    // Опасности на разных ярусах пещеры
     let gameObjects = [
         { x: 300, y: "top", type: "titan", icon: "💎", active: true },
         { x: 550, y: "bottom", type: "glass", icon: "💠", active: true },
@@ -455,7 +123,7 @@
         { x: 1100, y: "bottom", type: "enemy", icon: "👾", active: true },
         { x: 1350, y: "top", type: "titan", icon: "💎", active: true },
         { x: 1550, y: "bottom", type: "trap", icon: "💥", active: true },
-        { x: 1750, y: "top", type: "enemy", icon: "👾", active: true },
+        { x: 1850, y: "bottom", type: "boss", icon: "👹", active: true, hp: 3 }, 
         { x: maxDepth, y: "bottom", type: "exit", icon: "🚪", active: true } 
     ];
 
@@ -468,29 +136,25 @@
     let keys = {};
     window.addEventListener("keydown", (e) => { 
         keys[e.key] = true; 
-        
-        if (!gameOver) {
-            // Если ноги сломаны стеклом, перепрыгивать между платформами НЕЛЬЗЯ
+        if (!gameOver && !gameWon) {
             if (legsBroken && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-                log("❌ Ошибка: Лапы повреждены! Вы не можете карабкаться на другие ярусы.");
+                log("❌ Ошибка: Лапы повреждены!");
                 return;
             }
-
             if (e.key === "ArrowDown" && player.currentFloor === "top") {
-                player.y = bottomFloorY;
-                player.currentFloor = "bottom";
-                log("⬇️ Expie перепрыгнул на нижний ярус.");
+                player.y = bottomFloorY; player.currentFloor = "bottom";
+                log("⬇️ Expie спустился вниз.");
             } else if (e.key === "ArrowUp" && player.currentFloor === "bottom") {
-                player.y = topFloorY;
-                player.currentFloor = "top";
-                log("⬆️ Expie поднялся на верхние платформы.");
+                player.y = topFloorY; player.currentFloor = "top";
+                log("⬆️ Expie поднялся вверх.");
             }
+        } else if (e.key === "Enter") {
+            location.reload();
         }
     });
     window.addEventListener("keyup", (e) => { keys[e.key] = false; });
-
     function updateUI() {
-        document.getElementById('hp').innerText = hp;
+        document.getElementById('hp').innerText = Math.max(0, hp);
         document.getElementById('progress').innerText = Math.min(maxDepth, Math.floor(depth));
         document.getElementById('mines').innerText = inventory.mines;
         document.getElementById('titan').innerText = inventory.titan;
@@ -498,7 +162,7 @@
         
         document.getElementById('bleed-warn').style.display = leak ? 'block' : 'none';
         document.getElementById('glass-warn').style.display = legsBroken ? 'block' : 'none';
-        document.getElementById('legs-status').innerText = legsBroken ? "ТРАВМА (МЕДЛЕННО)" : "СТАБИЛЬНО";
+        document.getElementById('legs-status').innerText = legsBroken ? "ТРАВМА" : "СТАБИЛЬНО";
         document.getElementById('legs-status').style.color = legsBroken ? "#ff3333" : "#ffcc00";
 
         if (hp <= 0 && !gameOver) {
@@ -511,56 +175,62 @@
         gameObjects.forEach(obj => {
             if (obj.active && Math.abs(player.x - obj.x) < 25 && player.currentFloor === obj.y) {
                 if (obj.type === "exit") {
-                    gameOver = true;
-                    log("<b style='color:#00ff00;'>🎉 МИССИЯ ВЫПОЛНЕНА! Expie успешно спасся на лифте!</b>");
+                    gameWon = true;
+                    log("<b style='color:#00ff00;'>🎉 МИССИЯ ВЫПОЛНЕНА! Expie успешно добрался до лифта!</b>");
+                    return;
+                }
+
+                if (obj.type === "boss") {
+                    if (inventory.mines > 0) {
+                        inventory.mines--;
+                        obj.hp--;
+                        log(`💥 БУМ! Липучка попала в Босса! Прочность: ${obj.hp}`);
+                        player.x -= 40; 
+                        if (obj.hp <= 0) {
+                            obj.active = false;
+                            log("💀 <b>БОСС ПОВЕРЖЕН!</b> Путь к лифту свободен!");
+                        }
+                    } else {
+                        hp -= 50; leak = true; player.x -= 60; 
+                        log("<b style='color:#ff1111;'>⚠️ КРИТИЧЕСКИЙ УДАР! Босс протаранил Expie! -50 HP!</b>");
+                    }
                     return;
                 }
 
                 obj.active = false;
                 if (obj.type === "titan") {
-                    inventory.titan++;
-                    log("💎 Найден Титан.");
+                    inventory.titan++; log("💎 Найден Титан.");
                 } else if (obj.type === "glass") {
-                    hp -= 15;
-                    legsBroken = true; // Ломаем ноги
-                    player.speed = 2;  // Замедляем в 2 раза
-                    log("💠 Хруст! Осколки стекла сломали гидравлику ног скафандра (-15 HP). Прыжки заблокированы!");
+                    hp -= 15; legsBroken = true; player.speed = 2;  
+                    log("💠 Хруст! Стекло сломало гидравлику лап (-15 HP).");
                 } else if (obj.type === "trap") {
                     if (inventory.mines > 0) {
-                        inventory.mines--;
-                        log("💥 Ловушка уничтожена броском мины-липучки!");
+                        inventory.mines--; log("💥 Ловушка уничтожена липучкой!");
                     } else {
                         hp -= 35; leak = true;
-                        log("<b style='color:#ff5500;'>💥 БАБАХ! Подорвался на мине! Началось ОРАНЖЕВОЕ КРОВОТЕЧЕНИЕ!</b>");
+                        log("<b style='color:#ff5500;'>💥 БАБАХ! Наступил на мину! Кровотечение!</b>");
                     }
                 } else if (obj.type === "enemy") {
                     if (inventory.mines > 0) {
-                        inventory.mines--;
-                        log("👾 Мутант уничтожен взрывом липучки!");
+                        inventory.mines--; log("👾 Мутант разорван миной!");
                     } else {
                         hp -= 30; leak = true;
-                        log("⚔️ Тяжелый ближний бой! Мутант убит, у Expie открылось кровотечение (-30 HP).");
+                        log("⚔️ Ближний бой! Мутант убит, Expie ранен (-30 HP).");
                     }
                 }
                 updateUI();
             }
         });
     }
-
     function drawBlocks(offsetX) {
-        ctx.fillStyle = "#2c3540"; 
-        ctx.strokeStyle = "#161b22"; 
-        ctx.lineWidth = 1;
-
+        ctx.fillStyle = "#2c3540"; ctx.strokeStyle = "#161b22"; ctx.lineWidth = 1;
         for (let col = 0; col < canvas.width / blockSize + 10; col++) {
             let blockX = (col * blockSize) + (offsetX % blockSize) - blockSize;
-            
             for (let row = 0; row < 1; row++) {
                 let blockY = 110 + (row * blockSize);
                 ctx.fillRect(blockX, blockY, blockSize, blockSize);
                 ctx.strokeRect(blockX, blockY, blockSize, blockSize);
             }
-
             for (let row = 0; row < 2; row++) {
                 let blockY = 190 + (row * blockSize);
                 ctx.fillRect(blockX, blockY, blockSize, blockSize);
@@ -571,130 +241,82 @@
 
     function drawBlood(offsetX) {
         ctx.fillStyle = "#ff6600"; 
-        bloodDrops.forEach(drop => {
-            ctx.fillRect(drop.x + offsetX, drop.y, 4, 4);
-        });
+        bloodDrops.forEach(drop => { ctx.fillRect(drop.x + offsetX, drop.y, 4, 4); });
     }
 
     function drawFurryExpie(x, y) {
-        ctx.fillStyle = "#1e222a";
-        ctx.fillRect(x + 6, y + 42, 3, 13);
-        ctx.fillRect(x + 14, y + 42, 3, 13);
+        ctx.fillStyle = "#1e222a"; ctx.fillRect(x + 6, y + 42, 3, 13); ctx.fillRect(x + 14, y + 42, 3, 13);
+        ctx.fillStyle = "#e8c3b9"; ctx.beginPath(); ctx.arc(x - 4, y + 32, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillRect(x - 10, y + 28, 8, 12); 
+        ctx.fillStyle = "#2d3542"; ctx.fillRect(x + 2, y + 16, 18, 26);
+        ctx.fillStyle = "#212731"; ctx.fillRect(x + 6, y, 9, 18);
+        ctx.fillStyle = "#2d3542"; ctx.fillRect(x + 4, y - 6, 15, 12); ctx.fillRect(x + 1, y - 8, 5, 5);   
+        ctx.fillStyle = "#ffb3d1"; ctx.shadowBlur = 12; ctx.shadowColor = "#ff3399"; ctx.fillRect(x + 12, y - 3, 5, 5); ctx.shadowBlur = 0; 
+    }
 
-        ctx.fillStyle = "#e8c3b9";
-        ctx.beginPath();
-        ctx.arc(x - 4, y + 32, 10, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillRect(x - 10, y + 28, 8, 12); 
-
-        ctx.fillStyle = "#2d3542";
-        ctx.fillRect(x + 2, y + 16, 18, 26);
-
-        ctx.fillStyle = "#212731";
-        ctx.fillRect(x + 6, y, 9, 18);
-
-        ctx.fillStyle = "#2d3542";
-        ctx.fillRect(x + 4, y - 6, 15, 12); 
-        ctx.fillRect(x + 1, y - 8, 5, 5);   
-
-        ctx.fillStyle = "#ffb3d1";
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = "#ff3399";
-        ctx.fillRect(x + 12, y - 3, 5, 5); 
-        ctx.shadowBlur = 0; 
+    function drawEndScreens() {
+        ctx.fillStyle = "rgba(10, 13, 18, 0.88)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = "22px 'Courier New'"; ctx.textAlign = "center";
+        if (gameWon) {
+            ctx.fillStyle = "#00ff00"; ctx.fillText("🎉 МИССИЯ ВЫПОЛНЕНА!", canvas.width / 2, canvas.height / 2 - 10);
+        } else {
+            ctx.fillStyle = "#ff3333"; ctx.fillText("💀 EXPIE ПОГИБ В БЕЗДНЕ", canvas.width / 2, canvas.height / 2 - 10);
+            ctx.font = "13px 'Courier New'"; ctx.fillStyle = "#8b949e"; ctx.fillText("Нажмите ENTER для перезапуска системы", canvas.width / 2, canvas.height / 2 + 20);
+        }
+        ctx.textAlign = "left"; 
     }
 
     function gameLoop() {
-        if (gameOver) return;
-
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = "#0a0d12";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+        ctx.fillStyle = "#0a0d12"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         let isMoving = false;
-
-        if (keys["ArrowRight"] && player.x < maxDepth + 40) {
-            player.x += player.speed;
-            isMoving = true;
-            checkCollisions();
+        if (!gameOver && !gameWon) {
+            if (keys["ArrowRight"] && player.x < maxDepth + 40) { player.x += player.speed; isMoving = true; checkCollisions(); }
+            if (keys["ArrowLeft"] && player.x > 30) { player.x -= player.speed; isMoving = true; checkCollisions(); }
+            if (leak && isMoving && Math.random() < 0.05) {
+                hp -= 1; let bloodY = (player.currentFloor === "top") ? 106 : 186;
+                bloodDrops.push({ x: player.x, y: bloodY + Math.random() * 4 }); updateUI();
+            }
         }
-        if (keys["ArrowLeft"] && player.x > 30) {
-            player.x -= player.speed;
-            isMoving = true;
-            checkCollisions();
-        }
-
-        if (leak && isMoving && Math.random() < 0.05) {
-            hp -= 1;
-            let bloodY = (player.currentFloor === "top") ? 106 : 186;
-            bloodDrops.push({ x: player.x, y: bloodY + Math.random() * 4 });
-            updateUI();
-        }
-
-        depth = player.x; 
-        updateUI();
-
+        depth = player.x; updateUI();
         let offsetX = canvas.width / 2 - player.x;
         if (offsetX > 0) offsetX = 0;
         if (offsetX < canvas.width - (maxDepth + 100)) offsetX = canvas.width - (maxDepth + 100);
-
-        drawBlocks(offsetX);
-        drawBlood(offsetX);
-
+        drawBlocks(offsetX); drawBlood(offsetX);
         ctx.font = "20px Courier New";
         gameObjects.forEach(obj => {
             if (obj.active) {
                 let objY = (obj.y === "top") ? topFloorY + 35 : bottomFloorY + 35;
-                ctx.fillText(obj.icon, obj.x + offsetX, objY);
-                
-                if(obj.type === "exit") {
-                    ctx.fillStyle = "#00ff00"; 
-                    ctx.fillRect(obj.x + offsetX + 5, objY - 15, 15, 60);
-                }
+                if (obj.type === "boss") {
+                    ctx.font = "32px Courier New"; ctx.fillText(obj.icon, obj.x + offsetX - 10, objY + 5); ctx.font = "20px Courier New";
+                } else { ctx.fillText(obj.icon, obj.x + offsetX, objY); }
+                if(obj.type === "exit") { ctx.fillStyle = "#00ff00"; ctx.fillRect(obj.x + offsetX + 5, objY - 15, 15, 60); }
             }
         });
-
-        ctx.fillStyle = "#ff3366";
-        ctx.font = "12px Courier New";
+        ctx.fillStyle = "#ff3366"; ctx.font = "12px Courier New";
         let left = Math.floor(maxDepth - player.x);
-        if (left > 0) {
-            ctx.fillText(`Лифт: Впереди в ${left}м →`, 310, 25);
-        }
-
+        if (left > 0) { ctx.fillText(`Лифт: Впереди в ${left}м →`, 310, 25); }
         drawFurryExpie(player.x + offsetX, player.y);
-
+        if (gameOver || gameWon) { drawEndScreens(); }
         requestAnimationFrame(gameLoop);
     }
 
     function rechargeBattery() {
+        if (gameOver || gameWon) return;
         if (inventory.titan >= 1) {
-            inventory.titan--;
-            hp = Math.min(100, hp + 30);
-            leak = false; 
-            legsBroken = false; 
-            player.speed = 4;   
-            log("🩹 Раны зафиксированы титаном: оранжевая кровь остановлена, ноги вылечены.");
-            updateUI();
-        } else {
-            log("❌ Ошибка: Нужен 1 Титан для фиксации ран скафандра.");
-        }
+            inventory.titan--; hp = Math.min(100, hp + 30); leak = false; legsBroken = false; player.speed = 4;   
+            log("🩹 Раны зафиксированы титаном: кровь остановлена, ноги вылечены."); updateUI();
+        } else { log("❌ Нужен 1 Титан."); }
     }
 
     function craftMine() {
+        if (gameOver || gameWon) return;
         if (inventory.gunpowder >= 1 && inventory.titan >= 1) {
-            inventory.gunpowder--;
-            inventory.titan--;
-            inventory.mines++;
-            log("🛠️ Собрана активная мина-липучка.");
-            updateUI();
-        } else {
-            log("❌ Недостаточно компонентов.");
-        }
+            inventory.gunpowder--; inventory.titan--; inventory.mines++;
+            log("🛠️ Собрана мина-липучка."); updateUI();
+        } else { log("❌ Недостаточно компонентов."); }
     }
 
-    updateUI();
-    gameLoop();
+    updateUI(); gameLoop();
 </script>
 </body>
 </html>
