@@ -1,204 +1,218 @@
-<script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-
-    const logEl = document.getElementById('log');
-    function log(text) {
-        logEl.innerHTML += `<br>${text}`;
-        logEl.scrollTop = logEl.scrollHeight;
-    }
-
-    // Загрузка спрайтов
-    const sprites = {
-        head: new Image(), eyeOpen: new Image(), upTorso: new Image(),
-        downTorso: new Image(), tail: new Image(), thigh: new Image(),
-        crus: new Image(), foot: new Image(), upArm: new Image(),
-        downArm: new Image(), handB: new Image(), handF: new Image()
-    };
-
-    sprites.head.src = "experimentHead.png";
-    sprites.eyeOpen.src = "experimentEyeOpen.png";
-    sprites.upTorso.src = "experimentUpTorso.png";
-    sprites.downTorso.src = "experimentDownTorso.png";
-    sprites.tail.src = "experimentTail.png";
-    sprites.thigh.src = "experimentThigh.png";
-    sprites.crus.src = "experimentCrus.png";
-    sprites.foot.src = "experimentFoot.png";
-    sprites.upArm.src = "experimentUpArm.png";
-    sprites.downArm.src = "experimentDownArm.png";
-    sprites.handB.src = "experimentHandB.png";
-    sprites.handF.src = "experimentHandF.png";
-
-    let player = {
-        x: 220,
-        y: 60,
-        speed: 3,
-        direction: "right",
-        isRagdoll: false
-    };
-
-    let ragdoll = {
-        headY: 0, tailY: 0, armBY: 0, armFY: 0, legBY: 0, legFY: 0,
-        headA: 0, tailA: 0, armBA: 0, armFA: 0, legBA: 0, legFA: 0,
-        vy: 0
-    };
-
-    let keys = {};
-    window.addEventListener("keydown", (e) => { 
-        keys[e.key] = true; 
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Casualties: Unknown - Монитор Эксперимента</title>
+    <style>
+        body { 
+            background-color: #121212; 
+            color: #e0e0e0; 
+            font-family: monospace; 
+            padding: 20px; 
+            text-align: center; 
+        }
         
-        if (e.key.toLowerCase() === "x" || e.key.toLowerCase() === "ч") {
-            player.isRagdoll = !player.isRagdoll;
-            
-            if (player.isRagdoll) {
-                document.getElementById("mode-text").innerText = "РЭГДОЛЛ";
-                document.getElementById("mode-text").style.color = "#ff3366";
-                log("⚠️ Мышцы отключены! Скафандр Expie рухнул на пол.");
-                
-                ragdoll.vy = 2.5;
-                ragdoll.headA = 0.5;
-                ragdoll.tailA = 0.3;
-                ragdoll.armBA = 0.7;
-                ragdoll.armFA = -0.6;
-                ragdoll.legBA = 0.4;
-                ragdoll.legFA = -0.4;
+        .game-container { 
+            display: flex; 
+            justify-content: center; 
+            gap: 40px; 
+            margin-top: 20px; 
+        }
+        
+        /* Окно вывода графики Эксперимента */
+        .character-viewport { 
+            position: relative; 
+            width: 250px; 
+            height: 300px; 
+            background: #1a1a1a; 
+            border: 2px solid #333;
+            overflow: hidden;
+        }
+        
+        /* Абсолютное позиционирование, чтобы картинки ложились ровно друг на друга */
+        .body-part-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Сохраняет пропорции спрайтов */
+        }
+
+        .character-status { 
+            border: 2px solid #333; 
+            padding: 20px; 
+            background: #1a1a1a; 
+            width: 300px; 
+            text-align: left; 
+        }
+        
+        .controls { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            width: 250px; 
+        }
+        
+        button { 
+            background: #cf1414; 
+            color: white; 
+            border: none; 
+            padding: 10px; 
+            cursor: pointer; 
+            font-weight: bold; 
+        }
+        
+        button.heal { 
+            background: #14cf43; 
+        }
+        
+        button:hover { 
+            opacity: 0.8; 
+        }
+        
+        .status-ok { color: #14cf43; }
+        .status-warn { color: #ff9900; }
+        .status-crit { color: #cf1414; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>СИСТЕМА ЖИЗНЕОБЕСПЕЧЕНИЯ ЭКСПЕРИМЕНТА</h1>
+    <h2 id="global-status" class="status-ok">ПОДОПЫТНЫЙ СТАБИЛЕН</h2>
+
+    <div class="game-container">
+        
+        <!-- КУКЛА ПЕРСОНАЖА (СЛОИ КАРТИНОК) -->
+        <div class="character-viewport">
+            <!-- Нижний слой: Торс -->
+            <img id="img-uptorso" class="body-part-layer" src="experimentUpTorso.png" alt="Torso">
+            <!-- Средний слой: Голова (ложится поверх торса) -->
+            <img id="img-head" class="body-part-layer" src="experimentHead.png" alt="Head">
+            <!-- Верхний слой: Глаза (ложатся на лицо) -->
+            <img id="img-eye" class="body-part-layer" src="experimentEyeOpen.png" alt="Eye">
+        </div>
+
+        <!-- Окно состояния -->
+        <div class="character-status">
+            <h3>Состояние систем:</h3>
+            <p>Голова (HP): <span id="hp-head">100</span>/100</p>
+            <p>Верхний Торс (HP): <span id="hp-uptorso">120</span>/120</p>
+            <hr>
+            <p>Кровотечение: <span id="bleed-status">НЕТ</span></p>
+            <p>Психика (Чип): <span id="sanity-status">100%</span></p>
+        </div>
+
+        <!-- Кнопки теста механик -->
+        <div class="controls">
+            <h3>Тест повреждений:</h3>
+            <button onclick="dealDamage('head', 35)">Удар в Голову (-35 HP)</button>
+            <button onclick="dealDamage('head', 40)">Тяжелый удар в лицо (-40 HP)</button>
+            <button onclick="dealDamage('uptorso', 40)">Выстрел в Торс (-40 HP)</button>
+            <hr>
+            <h3>Медицина:</h3>
+            <button class="heal" onclick="heal('head', 100)">Вылечить Голову</button>
+        </div>
+    </div>
+
+    <!-- ВЕСЬ НАШ КОД И ЛОГИКА ИГРЫ -->
+    <script>
+        // Объект нашего Эксперимента с твоими спрайтами
+        const Experiment = {
+            isAlive: true,
+            sanity: 100,
+            bodyParts: {
+                head: { hp: 100, maxHp: 100, sprite: "experimentHead.png", isBleeding: false },
+                eye: { sprite: "experimentEyeOpen.png" },
+                uptorso: { hp: 120, maxHp: 120, sprite: "experimentUpTorso.png", isBleeding: false }
+            },
+
+            // Логика получения урона
+            receiveDamage: function(partName, damage) {
+                if (!this.isAlive) return;
+                let part = this.bodyParts[partName];
+                if (!part) return;
+
+                part.hp -= damage;
+                if (part.hp < 0) part.hp = 0;
+
+                // Переключение спрайтов головы на основе твоих файлов "Disfigured"
+                if (partName === "head") {
+                    if (this.bodyParts.head.hp <= 0) {
+                        this.isAlive = false;
+                        this.bodyParts.head.sprite = "experimentHeadDisfigured3.png";
+                        this.bodyParts.eye.sprite = "experimentEyePanic.png";
+                    } else if (this.bodyParts.head.hp < 35) {
+                        this.bodyParts.head.sprite = "experimentHeadDisfigured2.png";
+                        this.bodyParts.eye.sprite = "experimentEyePanic.png";
+                        this.bodyParts.head.isBleeding = true;
+                    } else if (this.bodyParts.head.hp < 70) {
+                        this.bodyParts.head.sprite = "experimentHeadDisfigured1.png";
+                        this.bodyParts.eye.sprite = "experimentEyeSad.png";
+                    }
+                }
+            },
+
+            // Логика лечения
+            healPart: function(partName, amount) {
+                if (!this.isAlive) return;
+                let part = this.bodyParts[partName];
+                if (!part) return;
+
+                part.hp += amount;
+                if (part.hp > part.maxHp) part.hp = part.maxHp;
+                part.isBleeding = false;
+
+                if (partName === "head" && part.hp >= 100) {
+                    part.sprite = "experimentHead.png";
+                    this.bodyParts.eye.sprite = "experimentEyeOpen.png";
+                }
+            }
+        };
+
+        // Функция обновления интерфейса и картинок в браузере
+        function updateUI() {
+            document.getElementById("hp-head").innerText = Experiment.bodyParts.head.hp;
+            document.getElementById("hp-uptorso").innerText = Experiment.bodyParts.uptorso.hp;
+
+            // Меняем картинки на экране
+            document.getElementById("img-head").src = Experiment.bodyParts.head.sprite;
+            document.getElementById("img-eye").src = Experiment.bodyParts.eye.sprite;
+            document.getElementById("img-uptorso").src = Experiment.bodyParts.uptorso.sprite;
+
+            // Статус кровотечения
+            let bleeding = Experiment.bodyParts.head.isBleeding;
+            let bleedLabel = document.getElementById("bleed-status");
+            bleedLabel.innerText = bleeding ? "КРИТИЧЕСКОЕ" : "НЕТ";
+            bleedLabel.className = bleeding ? "status-crit" : "status-ok";
+
+            // Главный статус жизни подопытного
+            let globalStatus = document.getElementById("global-status");
+            if (!Experiment.isAlive) {
+                globalStatus.innerText = "ЭКСПЕРИМЕНТ УНИЧТОЖЕН (СМЕРТЬ МОЗГА)";
+                globalStatus.className = "status-crit";
+            } else if (bleeding) {
+                globalStatus.innerText = "ВНИМАНИЕ: УГРОЗА ПОТЕРИ КРОВИ";
+                globalStatus.className = "status-warn";
             } else {
-                document.getElementById("mode-text").innerText = "ХОДЬБА";
-                document.getElementById("mode-text").style.color = "#00ff00";
-                log("✅ Системы запущены! Персонаж восстановил форму.");
-                
-                ragdoll.vy = 0;
-                ragdoll.headY = 0; ragdoll.tailY = 0; ragdoll.armBY = 0; ragdoll.armFY = 0; ragdoll.legBY = 0; ragdoll.legFY = 0;
-                ragdoll.headA = 0; ragdoll.tailA = 0; ragdoll.armBA = 0; ragdoll.armFA = 0; ragdoll.legBA = 0; ragdoll.legFA = 0;
+                globalStatus.innerText = "ПОДОПЫТНЫЙ СТАБИЛЕН";
+                globalStatus.className = "status-ok";
             }
         }
-    });
-    window.addEventListener("keyup", (e) => { keys[e.key] = false; });
 
-    let animTime = 0;
-
-    function drawPart(img, x, y, angle, scaleX = 1, pivotX = 0, pivotY = 0) {
-        if (!img.complete || img.naturalWidth === 0) return;
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.scale(scaleX, 1);
-        ctx.rotate(angle);
-        ctx.drawImage(img, -pivotX, -pivotY);
-        ctx.restore();
-    }
-
-    function gameLoop() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#0a0d12"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Отрисовка оригинального пиксельного пола в полосочку, как на твоем скриншоте!
-        ctx.fillStyle = "#161b22"; ctx.fillRect(0, 168, canvas.width, 72);
-        ctx.fillStyle = "#21262d";
-        for (let i = 0; i < canvas.width; i += 16) {
-            ctx.fillRect(i, 168, 8, 4);
+        // Функции для кнопок
+        function dealDamage(part, amount) {
+            Experiment.receiveDamage(part, amount);
+            updateUI();
         }
 
-        let legSwing = Math.sin(animTime * 0.2) * 10; // Сделали шаг шире и динамичнее
-        let armSwing = Math.cos(animTime * 0.2) * 6;
-
-        if (!player.isRagdoll) {
-            if (keys["ArrowRight"] && player.x < canvas.width - 50) {
-                player.x += player.speed; player.direction = "right"; animTime++;
-            }
-            if (keys["ArrowLeft"] && player.x > 10) {
-                player.x -= player.speed; player.direction = "left"; animTime++;
-            }
-        } else {
-            ragdoll.vy += 0.35;
-            ragdoll.headY += ragdoll.vy;
-            if (ragdoll.headY > 15) { ragdoll.headY = 15; ragdoll.headA += 0.02; }
-            ragdoll.tailY += ragdoll.vy * 0.8;
-            if (ragdoll.tailY > 10) { ragdoll.tailY = 10; ragdoll.tailA -= 0.01; }
-            ragdoll.armBY += ragdoll.vy * 0.9;
-            ragdoll.armFY += ragdoll.vy * 0.9;
-            ragdoll.legBY += ragdoll.vy * 0.9;
-            ragdoll.legFY += ragdoll.vy * 0.9;
-            if (ragdoll.armBY > 12) ragdoll.armBY = 12;
-            if (ragdoll.armFY > 12) ragdoll.armFY = 12;
-            if (ragdoll.legBY > 10) ragdoll.legBY = 10;
-            if (ragdoll.legFY > 10) ragdoll.legFY = 10;
+        function heal(part, amount) {
+            Experiment.healPart(part, amount);
+            updateUI();
         }
 
-        let sitY = player.y + 42;
-        let flip = player.direction === "left" ? -1 : 1;
-
-        // ТОЧНАЯ НАСТРОЙКА ПОЗЫ ПО СКРИНШОТУ (1-в-1)
-        
-        // 1. ХВОСТ (Приподнят вверх и развёрнут по-лисьи)
-        let tA = player.isRagdoll ? ragdoll.tailA : -0.2 + Math.sin(animTime * 0.1) * 0.05;
-        let tY = sitY + 8 + (player.isRagdoll ? ragdoll.tailY : 0);
-        drawPart(sprites.tail, player.x - (2 * flip), tY, tA, flip, 0, 4);
-
-        // 2. ЗАДНЯЯ РУКА
-        let aBA = player.isRagdoll ? ragdoll.armBA : -armSwing * 0.06;
-        let aBY = sitY - 2 + (player.isRagdoll ? ragdoll.armBY : 0);
-        if (sprites.upArm.complete) {
-            drawPart(sprites.upArm, player.x + (12 * flip), aBY, aBA, flip, 0, 0);
-            drawPart(sprites.handB, player.x + ((12 - legSwing * 0.5) * flip), aBY + 12, aBA * 1.1, flip, 0, 0);
-        }
-
-        // 3. ЗАДНЯЯ НОГА (Широкий шаг)
-        let lBA = player.isRagdoll ? ragdoll.legBA : legSwing * 0.06;
-        let lBY = sitY + 12 + (player.isRagdoll ? ragdoll.legBY : 0);
-        if (sprites.thigh.complete) {
-            drawPart(sprites.thigh, player.x + (2 * flip), lBY, lBA, flip, 0, 0);
-            drawPart(sprites.crus, player.x + ((2 + legSwing * 0.3) * flip), lBY + 12, lBA, flip, 0, 0);
-            drawPart(sprites.foot, player.x + ((2 + legSwing * 0.8) * flip), lBY + 24, lBA, flip, 0, 0);
-        }
-
-        // 4. ТАЗ (DownTorso)
-        let downTorsoY = sitY + 8 + (player.isRagdoll ? ragdoll.tailY * 0.4 : 0);
-        let torsoA = player.isRagdoll ? 0.15 : 0.1; // Небольшой наклон всего тела вперёд
-        drawPart(sprites.downTorso, player.x + (4 * flip), downTorsoY, torsoA, flip, 0, 0);
-
-        // 5. ГРУДЬ (UpTorso — наклонена вперёд при беге)
-        let upTorsoY = sitY - 4 + (player.isRagdoll ? ragdoll.headY * 0.3 : 0);
-        let chestA = player.isRagdoll ? torsoA * 0.5 : 0.15; 
-        drawPart(sprites.upTorso, player.x + (6 * flip), upTorsoY, chestA, flip, 0, 0);
-
-        // КОРОТКАЯ ШЕЯ (3 пикселя)
-        ctx.fillStyle = "#1e222a";
-        ctx.fillRect(player.x + (16 * flip), upTorsoY - 2, 4 * flip, 3);
-
-        // 6. ГОЛОВА (Посажена аккуратно, смотрит вперёд)
-        let hA = player.isRagdoll ? ragdoll.headA : 0.05;
-        let hY = sitY - 22 + (player.isRagdoll ? ragdoll.headY : 0);
-        drawPart(sprites.head, player.x + (10 * flip), hY, hA, flip, 0, 0);
-
-        // ТОЧНЫЙ ГЛАЗ С КАРТИНКИ: Маленький пиксельный визор без огромного размытого свечения!
-        if (sprites.eyeOpen.complete && sprites.eyeOpen.naturalWidth !== 0) {
-            ctx.save();
-            let eyeX = player.x + (10 * flip) + (10 * flip) * Math.cos(hA) - (4 * flip) * Math.sin(hA);
-            let eyeY = hY + 4 * Math.sin(hA) + 4 * Math.cos(hA);
-            // Рисуем оригинальный спрайт визора в масштабе 1-в-1
-            drawPart(sprites.eyeOpen, eyeX, eyeY, hA, flip, 0, 0);
-            ctx.restore();
-        }
-
-        // 7. ПЕРЕДНЯЯ НОГА
-        let lFA = player.isRagdoll ? ragdoll.legFA : -legSwing * 0.06;
-        let lFY = sitY + 12 + (player.isRagdoll ? ragdoll.legFY : 0);
-        if (sprites.thigh.complete) {
-            drawPart(sprites.thigh, player.x + (10 * flip), lFY, lFA, flip, 0, 0);
-            drawPart(sprites.crus, player.x + ((10 - legSwing * 0.3) * flip), lFY + 12, lFA, flip, 0, 0);
-            drawPart(sprites.foot, player.x + ((10 - legSwing * 0.8) * flip), lFY + 24, lFA, flip, 0, 0);
-        }
-
-        // 8. ПЕРЕДНЯЯ РУКА
-        let aFA = player.isRagdoll ? ragdoll.armFA : armSwing * 0.06;
-        let aFY = sitY - 2 + (player.isRagdoll ? ragdoll.armFY : 0);
-        if (sprites.downArm.complete) {
-            drawPart(sprites.downArm, player.x + (16 * flip), aFY, aFA, flip, 0, 0);
-            drawPart(sprites.handF, player.x + ((16 + armSwing * 0.5) * flip), aFY + 12, aFA * 1.1, flip, 0, 0);
-        }
-
-        requestAnimationFrame(gameLoop);
-    }
-
-    gameLoop();
-</script>
+        // Запуск при открытии страницы
+        updateUI();
+    </script>
+</body>
+</html>
