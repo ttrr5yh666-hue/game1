@@ -13,7 +13,9 @@
         .controls { display: flex; flex-direction: column; gap: 10px; width: 250px; }
         button { background: #1f2833; color: #ff4d4d; border: 1px solid #ff4d4d; padding: 10px; cursor: pointer; font-weight: bold; border-radius: 4px; }
         button.heal { color: #2ecc71; border: 1px solid #2ecc71; }
+        button.blue-btn { color: #66fcf1; border: 1px solid #66fcf1; padding: 5px 10px; margin: 2px; }
         .status-ok { color: #2ecc71; } .status-warn { color: #f1c40f; } .status-crit { color: #e74c3c; font-weight: bold; }
+        .tuner-panel { margin-top: 15px; padding: 10px; background: #141a22; border: 1px dashed #66fcf1; border-radius: 4px; text-align: center; }
     </style>
 </head>
 <body>
@@ -37,8 +39,8 @@
             <!-- ГОЛОВА -->
             <img id="img-head" src="experimentHead.png" alt="Head" style="position:absolute !important;transform:none !important;top:15px !important;left:88px !important;width:175px !important;height:175px !important;z-index:10 !important;object-fit:contain !important;image-rendering:pixelated !important;">
             
-            <!-- ИСПРАВЛЕНИЕ ГЛАЗА: Уменьшен ровно в 3 раза (48px) и спозиционирован точно на лицо -->
-            <img id="img-eye" src="experimentEyeOpen.png" alt="Eye" style="position:absolute !important;transform:none !important;top:47px !important;left:142px !important;width:48px !important;height:48px !important;z-index:11 !important;object-fit:contain !important;image-rendering:pixelated !important;">
+            <!-- ГЛАЗ (Управляется динамически через пульт) -->
+            <img id="img-eye" src="experimentEyeOpen.png" alt="Eye">
         </div>
 
         <div class="character-status">
@@ -51,6 +53,26 @@
             <hr>
             <p>Кровотечение: <span id="bleed-status">НЕТ</span></p>
             <p>Состояние Чипа: <span id="sanity-status">СТАБИЛЬНО</span></p>
+            
+            <!-- ПУЛЬТ НАСТРОЙКИ ГЛАЗА -->
+            <div class="tuner-panel">
+                <h4 style="margin:0 0 10px 0; color:#66fcf1;">НАСТРОЙКА ГЛАЗА:</h4>
+                <div>
+                    <button class="blue-btn" onclick="tuneEye('top', -1)">↑ Вверх</button>
+                </div>
+                <div>
+                    <button class="blue-btn" onclick="tuneEye('left', -1)">← Влево</button>
+                    <button class="blue-btn" onclick="tuneEye('left', 1)">Вправо →</button>
+                </div>
+                <div>
+                    <button class="blue-btn" onclick="tuneEye('top', 1)">↓ Вниз</button>
+                </div>
+                <div style="margin-top: 10px;">
+                    <button class="blue-btn" onclick="tuneEye('size', 2)">+ Больше</button>
+                    <button class="blue-btn" onclick="tuneEye('size', -2)">- Меньше</button>
+                </div>
+                <p style="font-size:11px; margin:10px 0 0 0; color:#888;" id="eye-coords">Координаты: top: 47, left: 142, size: 48</p>
+            </div>
         </div>
 
         <div class="controls">
