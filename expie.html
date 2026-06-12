@@ -1,52 +1,107 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SCAV: Прототип Expie</title>
-<style>
-body{background:#0b0c10;color:#c5c6c7;font-family:monospace;padding:20px;text-align:center;}
-.back-btn{display:inline-block;background:#1f2833;color:#66fcf1;padding:10px 20px;text-decoration:none;border:1px solid #45f3ff;border-radius:4px;margin-bottom:20px;}
-.game-container{display:flex;justify-content:center;gap:30px;margin-top:20px;flex-wrap:wrap;}
-.character-viewport{position:relative;width:300px;height:400px;background:#1f2833;border:2px solid #45f3ff;border-radius:8px;animation:breathe 3s ease-in-out infinite;}
-.body-part-layer{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;}
-@keyframes breathe{0% {transform:scale(1);} 50% {transform:scale(1.02) translateY(-2px);} 100% {transform:scale(1);}}
-.character-status{border:2px solid #1f2833;padding:20px;background:#141a22;width:300px;text-align:left;border-radius:8px;}
-.controls{display:flex;flex-direction:column;gap:10px;width:250px;}
-button{background:#1f2833;color:#ff4d4d;border:1px solid #ff4d4d;padding:10px;cursor:pointer;font-weight:bold;border-radius:4px;}
-button.heal{color:#2ecc71;border:1px solid #2ecc71;}
-.status-ok{color:#2ecc71;} .status-warn{color:#f1c40f;} .status-crit{color:#e74c3c;font-weight:bold;}
-</style></head><body>
-<a href="index.html" class="back-btn">⬅ НА ГЛАВНУЮ</a>
-<h1>СИСТЕМА ЖИЗНЕОБЕСПЕЧЕНИЯ ЭКСПЕРИМЕНТА</h1>
-<h2 id="global-status" class="status-ok">ПОДОПЫТНЫЙ СТАБИЛЕН</h2>
-<div class="game-container">
-<div class="character-viewport">
-<img id="img-tail" class="body-part-layer" src="experimentTail.png">
-<img id="img-thigh" class="body-part-layer" src="experimentThigh.png">
-<img id="img-crus" class="body-part-layer" src="experimentCrus.png">
-<img id="img-foot" class="body-part-layer" src="experimentFoot.png">
-<img id="img-downtorso" class="body-part-layer" src="experimentDownTorso.png">
-<img id="img-uptorso" class="body-part-layer" src="experimentUpTorso.png">
-<img id="img-uparm" class="body-part-layer" src="experimentUpArm.png">
-<img id="img-downarm" class="body-part-layer" src="experimentDownArm.png">
-<img id="img-handb" class="body-part-layer" src="experimentHandB.png">
-<img id="img-handf" class="body-part-layer" src="experimentHandF.png">
-<img id="img-head" class="body-part-layer" src="experimentHead.png">
-<img id="img-eye" class="body-part-layer" src="experimentEyeOpen.png">
-</div>
-<div class="character-status">
-<h3>Мониторинг систем:</h3>
-<p>Голова: <span id="hp-head">100</span>/100</p>
-<p>Верхний Торс: <span id="hp-uptorso">120</span>/120</p>
-<p>Нижний Торс: <span id="hp-downtorso">100</span>/100</p>
-<p>Голень: <span id="hp-crus">60</span>/60 <span id="lbl-crus"></span></p>
-<p>Хвост: <span id="hp-tail">40</span>/40</p><hr>
-<p>Кровотечение: <span id="bleed-status">НЕТ</span></p>
-<p>Состояние Чипа: <span id="sanity-status">СТАБИЛЬНО</span></p>
-</div>
-<div class="controls">
-<h3>Симуляция атак:</h3>
-<button onclick="dealDamage('head',35)">Удар в лицо (-35 HP)</button>
-<button onclick="dealDamage('head',40)">Укус в голову (-40 HP)</button>
-<button onclick="dealDamage('crus',45)">Удар в голень (-45 HP)</button>
-<button onclick="dealDamage('tail',40)">Откусить хвост (-40 HP)</button><hr>
-<button class="heal" onclick="heal('head',100)">Хирургический Набор</button>
-<button class="heal" onclick="heal('crus',60)">Медицинская шина</button>
-</div></div>
-<script src="game.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCAV: Прототип Expie</title>
+    <style>
+        body { background: #0b0c10; color: #c5c6c7; font-family: monospace; padding: 20px; text-align: center; }
+        .back-btn { display: inline-block; background: #1f2833; color: #66fcf1; padding: 10px 20px; text-decoration: none; border: 1px solid #45f3ff; border-radius: 4px; margin-bottom: 20px; }
+        .game-container { display: flex; justify-content: center; gap: 30px; margin-top: 20px; flex-wrap: wrap; }
+        
+        /* Главное окно куклы персонажа */
+        .character-viewport { 
+            position: relative; 
+            width: 320px; 
+            height: 460px; 
+            background: #1f2833; 
+            border: 2px solid #45f3ff; 
+            border-radius: 8px; 
+            overflow: hidden;
+        }
+        
+        /* Стили для точного позиционирования каждого спрайта */
+        .body-part-layer { 
+            position: absolute; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            object-fit: contain; 
+        }
+
+        /* Выстраиваем тело снизу вверх по пикселям */
+        #img-foot { bottom: 10px; width: 80px; height: 40px; z-index: 1; }
+        #img-crus { bottom: 45px; width: 70px; height: 60px; z-index: 2; }
+        #img-thigh { bottom: 100px; width: 85px; height: 70px; z-index: 3; }
+        #img-tail { bottom: 110px; left: 35%; width: 100px; height: 100px; z-index: 1; }
+
+        #img-downtorso { bottom: 160px; width: 110px; height: 80px; z-index: 4; }
+        #img-uptorso { bottom: 230px; width: 130px; height: 90px; z-index: 5; }
+
+        #img-uparm { bottom: 245px; width: 140px; height: 80px; z-index: 4; }
+        #img-downarm { bottom: 200px; width: 130px; height: 70px; z-index: 6; }
+        #img-handb { bottom: 180px; left: 33%; width: 40px; height: 40px; z-index: 3; }
+        #img-handf { bottom: 175px; left: 67%; width: 40px; height: 40px; z-index: 7; }
+
+        /* Голова и глаза сверху над телом */
+        #img-head { bottom: 310px; width: 110px; height: 110px; z-index: 10; }
+        #img-eye { bottom: 350px; width: 32px; height: 32px; z-index: 11; }
+
+        .character-status { border: 2px solid #1f2833; padding: 20px; background: #141a22; width: 300px; text-align: left; border-radius: 8px; }
+        .controls { display: flex; flex-direction: column; gap: 10px; width: 250px; }
+        button { background: #1f2833; color: #ff4d4d; border: 1px solid #ff4d4d; padding: 10px; cursor: pointer; font-weight: bold; border-radius: 4px; }
+        button.heal { color: #2ecc71; border: 1px solid #2ecc71; }
+        .status-ok { color: #2ecc71; } .status-warn { color: #f1c40f; } .status-crit { color: #e74c3c; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-btn">⬅ НА ГЛАВНУЮ</a>
+    <h1>СИСТЕМА ЖИЗНЕОБЕСПЕЧЕНИЯ ЭКСПЕРИМЕНТА</h1>
+    <h2 id="global-status" class="status-ok">ПОДОПЫТНЫЙ СТАБИЛЕН</h2>
+    
+    <div class="game-container">
+        <!-- СЛОИ КУКЛЫ РОБОТА/СПЕЙСМЕНА -->
+        <div class="character-viewport">
+            <img id="img-tail" class="body-part-layer" src="experimentTail.png" alt="Tail">
+            <img id="img-thigh" class="body-part-layer" src="experimentThigh.png" alt="Thigh">
+            <img id="img-crus" class="body-part-layer" src="experimentCrus.png" alt="Crus">
+            <img id="img-foot" class="body-part-layer" src="experimentFoot.png" alt="Foot">
+            <img id="img-downtorso" class="body-part-layer" src="experimentDownTorso.png" alt="DownTorso">
+            <img id="img-uptorso" class="body-part-layer" src="experimentUpTorso.png" alt="UpTorso">
+            <img id="img-uparm" class="body-part-layer" src="experimentUpArm.png" alt="UpArm">
+            <img id="img-downarm" class="body-part-layer" src="experimentDownArm.png" alt="DownArm">
+            <img id="img-handb" class="body-part-layer" src="experimentHandB.png" alt="HandB">
+            <img id="img-handf" class="body-part-layer" src="experimentHandF.png" alt="HandF">
+            <img id="img-head" class="body-part-layer" src="experimentHead.png" alt="Head">
+            <img id="img-eye" class="body-part-layer" src="experimentEyeOpen.png" alt="Eye">
+        </div>
+
+        <!-- ТАБЛИЦА СТАТУСОВ -->
+        <div class="character-status">
+            <h3>Мониторинг систем:</h3>
+            <p>Голова: <span id="hp-head">100</span>/100</p>
+            <p>Верхний Торс: <span id="hp-uptorso">120</span>/120</p>
+            <p>Нижний Торс: <span id="hp-downtorso">100</span>/100</p>
+            <p>Голень: <span id="hp-crus">60</span>/60 <span id="lbl-crus"></span></p>
+            <p>Хвост: <span id="hp-tail">40</span>/40</p>
+            <hr>
+            <p>Кровотечение: <span id="bleed-status">НЕТ</span></p>
+            <p>Состояние Чипа: <span id="sanity-status">СТАБИЛЬНО</span></p>
+        </div>
+
+        <!-- КНОПКИ АТАК -->
+        <div class="controls">
+            <h3>Симуляция атак:</h3>
+            <button onclick="dealDamage('head',35)">Удар в лицо (-35 HP)</button>
+            <button onclick="dealDamage('head',40)">Укус в голову (-40 HP)</button>
+            <button onclick="dealDamage('crus',45)">Удар в голень (-45 HP)</button>
+            <button onclick="dealDamage('tail',40)">Откусить хвост (-40 HP)</button>
+            <hr>
+            <button class="heal" onclick="heal('head',100)">Хирургический Набор</button>
+            <button class="heal" onclick="heal('crus',60)">Медицинская шина</button>
+        </div>
+    </div>
+
+    <!-- ПОДКЛЮЧАЕМ ЛОГИКУ ИЗ ТВОЕГО GAME.JS -->
+    <script src="game.js"></script>
+</body>
+</html>
