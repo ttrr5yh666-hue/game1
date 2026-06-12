@@ -74,15 +74,15 @@ function updateUI() {
 
     document.getElementById("img-head").src = Experiment.bodyParts.head.sprite;
     
-    // ЖЕСТКАЯ ФИКСАЦИЯ МАСШТАБА ГЛАЗА В СКРИПТЕ
+    // ФИКСАЦИЯ УМЕНЬШЕННОГО ГЛАЗА В JS
     let eyeImg = document.getElementById("img-eye");
     eyeImg.src = Experiment.bodyParts.eye.sprite;
     eyeImg.style.position = "absolute";
     eyeImg.style.transform = "none";
-    eyeImg.style.top = "-102px";       
-    eyeImg.style.left = "-20px";     
-    eyeImg.style.width = "430px";    
-    eyeImg.style.height = "430px";
+    eyeImg.style.top = "28px";       
+    eyeImg.style.left = "110px";     
+    eyeImg.style.width = "143px";    
+    eyeImg.style.height = "143px";
     eyeImg.style.zIndex = "11";
     eyeImg.style.objectFit = "contain";
     eyeImg.style.imageRendering = "pixelated";
