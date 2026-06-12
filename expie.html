@@ -9,84 +9,96 @@
         .back-btn { display: inline-block; background: #1f2833; color: #66fcf1; padding: 10px 20px; text-decoration: none; border: 1px solid #45f3ff; border-radius: 4px; margin-bottom: 20px; }
         .game-container { display: flex; justify-content: center; gap: 30px; margin-top: 20px; flex-wrap: wrap; }
         .character-viewport { position: relative; width: 320px; height: 480px; background: #1f2833; border: 2px solid #45f3ff; border-radius: 8px; overflow: hidden; }
+        .character-viewport img { position: absolute; object-fit: contain; image-rendering: pixelated; transform: none; }
         .character-status { border: 2px solid #1f2833; padding: 20px; background: #141a22; width: 300px; text-align: left; border-radius: 8px; }
-        .controls { display: flex; flex-direction: column; gap: 10px; width: 250px; }
-        button { background: #1f2833; color: #ff4d4d; border: 1px solid #ff4d4d; padding: 10px; cursor: pointer; font-weight: bold; border-radius: 4px; }
-        button.heal { color: #2ecc71; border: 1px solid #2ecc71; }
-        button.blue-btn { color: #66fcf1; border: 1px solid #66fcf1; padding: 5px 10px; margin: 2px; background: #1f2833; }
-        .status-ok { color: #2ecc71; } .status-warn { color: #f1c40f; } .status-crit { color: #e74c3c; font-weight: bold; }
-        .tuner-panel { margin-top: 15px; padding: 10px; background: #141a22; border: 1px dashed #66fcf1; border-radius: 4px; text-align: center; }
+        
+        /* Стили для ползунков */
+        .slider-panel { margin-top: 15px; padding: 10px; background: #141a22; border: 1px dashed #66fcf1; border-radius: 4px; }
+        .slider-group { margin: 10px 0; text-align: left; }
+        .slider-group label { display: inline-block; width: 80px; color: #66fcf1; font-weight: bold; }
+        .slider-group input { width: 180px; vertical-align: middle; }
+        .slider-value { color: #fff; margin-left: 5px; }
     </style>
 </head>
 <body>
     <a href="index.html" class="back-btn">⬅ НА ГЛАВНУЮ</a>
     <h1>СИСТЕМА ЖИЗНЕОБЕСПЕЧЕНИЯ ЭКСПЕРИМЕНТА</h1>
-    <h2 id="global-status" class="status-ok">ПОДОПЫТНЫЙ СТАБИЛЕН</h2>
     
     <div class="game-container">
+        <!-- КУКЛА ПЕРСОНАЖА -->
         <div class="character-viewport">
-            <img id="img-tail" src="experimentTail.png" alt="Tail" style="position:absolute !important;transform:none !important;top:180px !important;left:20px !important;width:160px !important;height:160px !important;z-index:1 !important;object-fit:contain !important;image-rendering:pixelated !important;">
-            <img id="img-thigh" src="experimentThigh.png" alt="Thigh" style="position:absolute !important;transform:none !important;top:260px !important;left:110px !important;width:105px !important;height:95px !important;z-index:3 !important;object-fit:contain !important;image-rendering:pixelated !important;">
-            <img id="img-crus" src="experimentCrus.png" alt="Crus" style="position:absolute !important;transform:none !important;top:310px !important;left:95px !important;width:110px !important;height:100px !important;z-index:2 !important;object-fit:contain !important;image-rendering:pixelated !important;">
-            <img id="img-foot" src="experimentFoot.png" alt="Foot" style="position:absolute !important;transform:none !important;top:375px !important;left:115px !important;width:100px !important;height:75px !important;z-index:3 !important;object-fit:contain !important;image-rendering:pixelated !important;">
-            <img id="img-downtorso" src="experimentDownTorso.png" alt="DownTorso" style="position:absolute !important;transform:none !important;top:215px !important;left:115px !important;width:105px !important;height:95px !important;z-index:4 !important;object-fit:contain !important;image-rendering:pixelated !important;">
-            <img id="img-uptorso" src="experimentUpTorso.png" alt="UpTorso" style="position:absolute !important;transform:none !important;top:145px !important;left:110px !important;width:115px !important;height:115px !important;z-index:5 !important;object-fit:contain !important;image-rendering:pixelated !important;">
-            <img id="img-uparm" src="experimentUpArm.png" alt="UpArm" style="position:absolute !important;transform:none !important;top:165px !important;left:115px !important;width:110px !important;height:85px !important;z-index:4 !important;object-fit:contain !important;image-rendering:pixelated !important;">
-            <img id="img-downarm" src="experimentDownArm.png" alt="DownArm" style="position:absolute !important;transform:none !important;top:200px !important;left:125px !important;width:105px !important;height:80px !important;z-index:6 !important;object-fit:contain !important;image-rendering:pixelated !important;">
-            <img id="img-handb" src="experimentHandB.png" alt="HandB" style="position:absolute !important;transform:none !important;top:240px !important;left:100px !important;width:55px !important;height:55px !important;z-index:3 !important;object-fit:contain !important;image-rendering:pixelated !important;">
-            <img id="img-handf" src="experimentHandF.png" alt="HandF" style="position:absolute !important;transform:none !important;top:235px !important;left:160px !important;width:55px !important;height:55px !important;z-index:7 !important;object-fit:contain !important;image-rendering:pixelated !important;">
-            
-            <!-- ГОЛОВА -->
-            <img id="img-head" src="experimentHead.png" alt="Head" style="position:absolute !important;transform:none !important;top:15px !important;left:88px !important;width:175px !important;height:175px !important;z-index:10 !important;object-fit:contain !important;image-rendering:pixelated !important;">
-            
-            <!-- ИСПРАВЛЕНИЕ: Добавили базовый стиль, чтобы JS мог свободно двигать картинку -->
-            <img id="img-eye" src="experimentEyeOpen.png" alt="Eye" style="position:absolute;z-index:11;">
+            <img id="img-tail" src="experimentTail.png" style="top:180px;left:20px;width:160px;height:160px;z-index:1;">
+            <img id="img-thigh" src="experimentThigh.png" style="top:260px;left:110px;width:105px;height:95px;z-index:3;">
+            <img id="img-crus" src="experimentCrus.png" style="top:310px;left:95px;width:110px;height:100px;z-index:2;">
+            <img id="img-foot" src="experimentFoot.png" style="top:375px;left:115px;width:100px;height:75px;z-index:3;">
+            <img id="img-downtorso" src="experimentDownTorso.png" style="top:215px;left:115px;width:105px;height:95px;z-index:4;">
+            <img id="img-uptorso" src="experimentUpTorso.png" style="top:145px;left:110px;width:115px;height:115px;z-index:5;">
+            <img id="img-uparm" src="experimentUpArm.png" style="top:165px;left:115px;width:110px;height:85px;z-index:4;">
+            <img id="img-downarm" src="experimentDownArm.png" style="top:200px;left:125px;width:105px;height:80px;z-index:6;">
+            <img id="img-handb" src="experimentHandB.png" style="top:240px;left:100px;width:55px;height:55px;z-index:3;">
+            <img id="img-handf" src="experimentHandF.png" style="top:235px;left:160px;width:55px;height:55px;z-index:7;">
+            <img id="img-head" src="experimentHead.png" style="top:15px;left:88px;width:175px;height:175px;z-index:10;">
+            <!-- ГЛАЗ (Управляется ползунками) -->
+            <img id="img-eye" src="experimentEyeOpen.png" style="z-index:11;">
         </div>
 
+        <!-- ПАНЕЛЬ УПРАВЛЕНИЯ ПОЛЗУНКАМИ -->
         <div class="character-status">
-            <h3>Мониторинг систем:</h3>
-            <p>Голова: <span id="hp-head">100</span>/100</p>
-            <p>Верхний Торс: <span id="hp-uptorso">120</span>/120</p>
-            <p>Нижний Торс: <span id="hp-downtorso">100</span>/100</p>
-            <p>Голень: <span id="hp-crus">60</span>/60 <span id="lbl-crus"></span></p>
-            <p>Хвост: <span id="hp-tail">40</span>/40</p>
-            <hr>
-            <p>Кровотечение: <span id="bleed-status">НЕТ</span></p>
-            <p>Состояние Чипа: <span id="sanity-status">СТАБИЛЬНО</span></p>
+            <h3>Мониторинг и настройка:</h3>
             
-            <!-- ПУЛЬТ НАСТРОЙКИ ГЛАЗА -->
-            <div class="tuner-panel">
-                <h4 style="margin:0 0 10px 0; color:#66fcf1;">НАСТРОЙКА ГЛАЗА:</h4>
-                <div>
-                    <button class="blue-btn" onclick="tuneEye('top', -1)">↑ Вверх</button>
+            <div class="slider-panel">
+                <h4 style="margin:0 0 10px 0; color:#66fcf1; text-align:center;">НАСТРОЙКА ГЛАЗА (1%-100%):</h4>
+                
+                <div class="slider-group">
+                    <label>Ось X:</label>
+                    <input type="range" id="slide-x" min="1" max="100" value="51" oninput="moveEye()">
+                    <span id="val-x" class="slider-value">51%</span>
                 </div>
-                <div>
-                    <button class="blue-btn" onclick="tuneEye('left', -1)">← Влево</button>
-                    <button class="blue-btn" onclick="tuneEye('left', 1)">Вправо →</button>
+                
+                <div class="slider-group">
+                    <label>Ось Y:</label>
+                    <input type="range" id="slide-y" min="1" max="100" value="11" oninput="moveEye()">
+                    <span id="val-y" class="slider-value">11%</span>
                 </div>
-                <div>
-                    <button class="blue-btn" onclick="tuneEye('top', 1)">↓ Вниз</button>
+                
+                <div class="slider-group">
+                    <label>Размер:</label>
+                    <input type="range" id="slide-size" min="1" max="100" value="15" oninput="moveEye()">
+                    <span id="val-size" class="slider-value">15%</span>
                 </div>
-                <div style="margin-top: 10px;">
-                    <button class="blue-btn" onclick="tuneEye('size', 2)">+ Больше</button>
-                    <button class="blue-btn" onclick="tuneEye('size', -2)">- Меньше</button>
-                </div>
-                <p style="font-size:11px; margin:10px 0 0 0; color:#888;" id="eye-coords">Координаты: top: 47, left: 142, size: 48</p>
             </div>
-        </div>
-
-        <div class="controls">
-            <h3>Симуляция атак:</h3>
-            <button onclick="dealDamage('head',35)">Удар в лицо (-35 HP)</button>
-            <button onclick="dealDamage('head',40)">Укус в голову (-40 HP)</button>
-            <button onclick="dealDamage('crus',45)">Удар в голень (-45 HP)</button>
-            <button onclick="dealDamage('tail',40)">Откусить хвост (-40 HP)</button>
-            <hr>
-            <button class="heal" onclick="heal('head',100)">Хирургический Набор</button>
-            <button class="heal" onclick="heal('crus',60)">Медицинская шина</button>
+            
+            <p style="font-size:11px; margin-top:15px; color:#888; text-align:center;">Выровняй глаз ползунками и пришли получившиеся проценты!</p>
         </div>
     </div>
 
-    <script src="game.js"></script>
+    <script>
+        function moveEye() {
+            // Читаем проценты из ползунков
+            let pctX = document.getElementById("slide-x").value;
+            let pctY = document.getElementById("slide-y").value;
+            let pctSize = document.getElementById("slide-size").value;
+
+            // Обновляем текст процентов на экране
+            document.getElementById("val-x").innerText = pctX + "%";
+            document.getElementById("val-y").innerText = pctY + "%";
+            document.getElementById("val-size").innerText = pctSize + "%";
+
+            // Переводим проценты в пиксели относительно окна 320x480
+            let targetLeft = (pctX / 100) * 320;
+            let targetTop = (pctY / 100) * 480;
+            let targetSize = (pctSize / 100) * 320; // масштаб от ширины контейнера
+
+            // Применяем позицию к глазу
+            let eye = document.getElementById("img-eye");
+            eye.style.left = targetLeft + "px";
+            eye.style.top = targetTop + "px";
+            eye.style.width = targetSize + "px";
+            eye.style.height = targetSize + "px";
+        }
+
+        // Запуск выравнивания при старте страницы
+        moveEye();
+    </script>
 </body>
 </html>
