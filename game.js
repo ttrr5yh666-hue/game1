@@ -9,7 +9,6 @@ const Experiment = {
         tail: { hp: 40, maxHp: 40, sprite: "experimentTail.png", isBleeding: false }
     },
 
-    // Логика получения урона
     receiveDamage: function(partName, damage) {
         if (!this.isAlive) return;
         let part = this.bodyParts[partName];
@@ -43,7 +42,6 @@ const Experiment = {
         }
     },
 
-    // Логика медицины
     healPart: function(partName, amount) {
         if (!this.isAlive) return;
         let part = this.bodyParts[partName];
@@ -67,7 +65,6 @@ const Experiment = {
     }
 };
 
-// Функция обновления картинок и текста на сайте
 function updateUI() {
     document.getElementById("hp-head").innerText = Experiment.bodyParts.head.hp;
     document.getElementById("hp-uptorso").innerText = Experiment.bodyParts.uptorso.hp;
@@ -75,33 +72,29 @@ function updateUI() {
     document.getElementById("hp-crus").innerText = Experiment.bodyParts.crus.hp;
     document.getElementById("hp-tail").innerText = Experiment.bodyParts.tail.hp;
 
-    // Обновляем спрайт головы
     document.getElementById("img-head").src = Experiment.bodyParts.head.sprite;
     
-    // ЖЕСТКАЯ ФИКСАЦИЯ ГЛАЗА: Меняем картинку, но принудительно держим ровные координаты
+    // BLOKADA OKA W JAVASCRIPT: Oko zostaje duże (145px) i trafia idealnie w maskę
     let eyeImg = document.getElementById("img-eye");
     eyeImg.src = Experiment.bodyParts.eye.sprite;
     eyeImg.style.position = "absolute";
     eyeImg.style.transform = "none";
-    eyeImg.style.top = "50px";       // Идеальная высота по вертикали
-    eyeImg.style.left = "161px";     // Идеальное положение по горизонтали
-    eyeImg.style.width = "45px";     // Аккуратный родной размер зрачка
-    eyeImg.style.height = "45px";
+    eyeImg.style.top = "60px";       
+    eyeImg.style.left = "110px";     
+    eyeImg.style.width = "145px";    
+    eyeImg.style.height = "145px";
     eyeImg.style.zIndex = "11";
     eyeImg.style.objectFit = "contain";
     eyeImg.style.imageRendering = "pixelated";
 
-    // Вывод статуса перелома ноги
     document.getElementById("lbl-crus").innerText = Experiment.bodyParts.crus.isBroken ? "(ПЕРЕЛОМ)" : "";
     document.getElementById("lbl-crus").className = Experiment.bodyParts.crus.isBroken ? "status-crit" : "";
 
-    // Подсчет общего статуса кровотечения
     let bleeding = Experiment.bodyParts.head.isBleeding || Experiment.bodyParts.crus.isBleeding || Experiment.bodyParts.tail.isBleeding;
     let bleedLabel = document.getElementById("bleed-status");
     bleedLabel.innerText = bleeding ? "АКТИВНО" : "НЕТ";
     bleedLabel.className = bleeding ? "status-crit" : "status-ok";
 
-    // Проверка чипа в голове подопытного
     let sanityLabel = document.getElementById("sanity-status");
     if (Experiment.bodyParts.head.hp < 35 && Experiment.isAlive) {
         sanityLabel.innerText = "ЧИП КОРОТИТ (ГЛЮКИ)";
@@ -114,7 +107,6 @@ function updateUI() {
         sanityLabel.className = "status-ok";
     }
 
-    // Главный статус системы жизнеобеспечения
     let globalStatus = document.getElementById("global-status");
     if (!Experiment.isAlive) {
         globalStatus.innerText = "ЭКСПЕРИМЕНТ УНИЧТОЖЕН";
@@ -128,7 +120,6 @@ function updateUI() {
     }
 }
 
-// Функции для работы кнопок клика на сайте
 function dealDamage(part, amount) {
     Experiment.receiveDamage(part, amount);
     updateUI();
@@ -139,5 +130,4 @@ function heal(part, amount) {
     updateUI();
 }
 
-// Стартовый запуск интерфейса при открытии страницы
 updateUI();
