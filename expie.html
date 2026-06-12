@@ -22,9 +22,10 @@
     <h2 id="global-status" class="status-ok">ПОДОПЫТНЫЙ СТАБИЛЕН</h2>
     
     <div class="game-container">
-        <!-- КУКЛА С ВШИТЫМИ ЖЕСТКИМИ СТИЛЯМИ И КООРДИНАТАМИ -->
+        <!-- ИСПРАВЛЕННЫЕ КООРДИНАТЫ ПО КРАСНЫМ СТРЕЛОЧКАМ -->
         <div class="character-viewport">
-            <img id="img-tail" src="experimentTail.png" alt="Tail" style="position:absolute;transform:none;top:215px;left:-10px;width:175px;height:175px;z-index:1;object-fit:contain;image-rendering:pixelated;">
+            <!-- ХВОСТ: подняли выше (top: 180px) и прижали к телу (left: 20px) -->
+            <img id="img-tail" src="experimentTail.png" alt="Tail" style="position:absolute;transform:none;top:180px;left:20px;width:160px;height:160px;z-index:1;object-fit:contain;image-rendering:pixelated;">
             <img id="img-thigh" src="experimentThigh.png" alt="Thigh" style="position:absolute;transform:none;top:260px;left:110px;width:105px;height:95px;z-index:3;object-fit:contain;image-rendering:pixelated;">
             <img id="img-crus" src="experimentCrus.png" alt="Crus" style="position:absolute;transform:none;top:310px;left:95px;width:110px;height:100px;z-index:2;object-fit:contain;image-rendering:pixelated;">
             <img id="img-foot" src="experimentFoot.png" alt="Foot" style="position:absolute;transform:none;top:375px;left:115px;width:100px;height:75px;z-index:3;object-fit:contain;image-rendering:pixelated;">
@@ -34,8 +35,11 @@
             <img id="img-downarm" src="experimentDownArm.png" alt="DownArm" style="position:absolute;transform:none;top:200px;left:125px;width:105px;height:80px;z-index:6;object-fit:contain;image-rendering:pixelated;">
             <img id="img-handb" src="experimentHandB.png" alt="HandB" style="position:absolute;transform:none;top:240px;left:100px;width:55px;height:55px;z-index:3;object-fit:contain;image-rendering:pixelated;">
             <img id="img-handf" src="experimentHandF.png" alt="HandF" style="position:absolute;transform:none;top:235px;left:160px;width:55px;height:55px;z-index:7;object-fit:contain;image-rendering:pixelated;">
-            <img id="img-head" src="experimentHead.png" alt="Head" style="position:absolute;transform:none;top:25px;left:100px;width:150px;height:150px;z-index:10;object-fit:contain;image-rendering:pixelated;">
-            <img id="img-eye" src="experimentEyeOpen.png" alt="Eye" style="position:absolute;transform:none;top:62px;left:178px;width:45px;height:45px;z-index:11;object-fit:contain;image-rendering:pixelated;">
+            
+            <!-- ГОЛОВА: опустили ниже к торсу (было top: 25px, стало top: 65px) -->
+            <img id="img-head" src="experimentHead.png" alt="Head" style="position:absolute;transform:none;top:65px;left:100px;width:150px;height:150px;z-index:10;object-fit:contain;image-rendering:pixelated;">
+            <!-- ГЛАЗ: вернули на лицо (top: 102px, left: 145px) и сделали чуть крупнее -->
+            <img id="img-eye" src="experimentEyeOpen.png" alt="Eye" style="position:absolute;transform:none;top:102px;left:145px;width:48px;height:48px;z-index:11;object-fit:contain;image-rendering:pixelated;">
         </div>
 
         <div class="character-status">
