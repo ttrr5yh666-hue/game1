@@ -29,23 +29,25 @@
             image-rendering: pixelated;
         }
 
-        /* КООРДИНАТЫ ДЛЯ ТЕСТА: Подгоняем голову, глаз и торс */
+        /* КООРДИНАТЫ ШАГ 2: Увеличиваем хвост и собираем руки */
         #img-foot { bottom: 10px; width: 80px; height: 40px; z-index: 1; }
         #img-crus { bottom: 45px; width: 70px; height: 60px; z-index: 2; }
         #img-thigh { bottom: 100px; width: 85px; height: 70px; z-index: 3; }
-        #img-tail { bottom: 110px; left: 35%; width: 100px; height: 100px; z-index: 1; }
+        
+        /* ХВОСТ: Сделал намного больше, поднял к бедрам и сдвинул влево */
+        #img-tail { bottom: 115px; left: 24%; width: 140px; height: 140px; z-index: 1; }
 
         #img-downtorso { bottom: 160px; width: 110px; height: 80px; z-index: 4; }
-        
-        /* ТОРС: Поднимаем выше и делаем крупнее */
         #img-uptorso { bottom: 200px; width: 140px; height: 110px; z-index: 5; }
 
         #img-uparm { bottom: 245px; width: 140px; height: 80px; z-index: 4; }
         #img-downarm { bottom: 200px; width: 130px; height: 70px; z-index: 6; }
-        #img-handb { bottom: 180px; left: 33%; width: 40px; height: 40px; z-index: 3; }
-        #img-handf { bottom: 175px; left: 67%; width: 40px; height: 40px; z-index: 7; }
+        
+        /* ЛАПЫ/КИСТИ: Сделал больше и сдвинул ближе к торсу */
+        #img-handb { bottom: 185px; left: 39%; width: 55px; height: 55px; z-index: 3; }
+        #img-handf { bottom: 180px; left: 61%; width: 55px; height: 55px; z-index: 7; }
 
-        /* ГОЛОВА И ГЛАЗ: Опускаем ниже к торсу и делаем больше */
+        /* ГОЛОВА И ГЛАЗ (Идеально сели в прошлом шаге) */
         #img-head { bottom: 260px; width: 150px; height: 150px; z-index: 10; }
         #img-eye { bottom: 300px; width: 45px; height: 45px; z-index: 11; }
 
