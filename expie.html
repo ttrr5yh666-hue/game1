@@ -11,94 +11,145 @@
         .character-viewport { position: relative; width: 320px; height: 480px; background: #1f2833; border: 2px solid #45f3ff; border-radius: 8px; overflow: hidden; }
         .character-viewport img { position: absolute; object-fit: contain; image-rendering: pixelated; transform: none; }
         .character-status { border: 2px solid #1f2833; padding: 20px; background: #141a22; width: 300px; text-align: left; border-radius: 8px; }
-        
-        /* Стили для ползунков */
+        .controls { display: flex; flex-direction: column; gap: 10px; width: 250px; }
+        button { background: #1f2833; color: #ff4d4d; border: 1px solid #ff4d4d; padding: 10px; cursor: pointer; font-weight: bold; border-radius: 4px; }
+        button.heal { color: #2ecc71; border: 1px solid #2ecc71; }
+        .status-ok { color: #2ecc71; } .status-warn { color: #f1c40f; } .status-crit { color: #e74c3c; font-weight: bold; }
         .slider-panel { margin-top: 15px; padding: 10px; background: #141a22; border: 1px dashed #66fcf1; border-radius: 4px; }
         .slider-group { margin: 10px 0; text-align: left; }
         .slider-group label { display: inline-block; width: 80px; color: #66fcf1; font-weight: bold; }
-        .slider-group input { width: 180px; vertical-align: middle; }
+        .slider-group input { width: 170px; vertical-align: middle; }
         .slider-value { color: #fff; margin-left: 5px; }
     </style>
 </head>
 <body>
     <a href="index.html" class="back-btn">⬅ НА ГЛАВНУЮ</a>
     <h1>СИСТЕМА ЖИЗНЕОБЕСПЕЧЕНИЯ ЭКСПЕРИМЕНТА</h1>
-    
+    <h2 id="global-status" class="status-ok">ПОДОПЫТНЫЙ СТАБИЛЕН</h2>
     <div class="game-container">
-        <!-- КУКЛА ПЕРСОНАЖА -->
         <div class="character-viewport">
-            <img id="img-tail" src="experimentTail.png" style="top:180px;left:20px;width:160px;height:160px;z-index:1;">
-            <img id="img-thigh" src="experimentThigh.png" style="top:260px;left:110px;width:105px;height:95px;z-index:3;">
-            <img id="img-crus" src="experimentCrus.png" style="top:310px;left:95px;width:110px;height:100px;z-index:2;">
-            <img id="img-foot" src="experimentFoot.png" style="top:375px;left:115px;width:100px;height:75px;z-index:3;">
-            <img id="img-downtorso" src="experimentDownTorso.png" style="top:215px;left:115px;width:105px;height:95px;z-index:4;">
-            <img id="img-uptorso" src="experimentUpTorso.png" style="top:145px;left:110px;width:115px;height:115px;z-index:5;">
-            <img id="img-uparm" src="experimentUpArm.png" style="top:165px;left:115px;width:110px;height:85px;z-index:4;">
-            <img id="img-downarm" src="experimentDownArm.png" style="top:200px;left:125px;width:105px;height:80px;z-index:6;">
-            <img id="img-handb" src="experimentHandB.png" style="top:240px;left:100px;width:55px;height:55px;z-index:3;">
-            <img id="img-handf" src="experimentHandF.png" style="top:235px;left:160px;width:55px;height:55px;z-index:7;">
-            <img id="img-head" src="experimentHead.png" style="top:15px;left:88px;width:175px;height:175px;z-index:10;">
-            <!-- ГЛАЗ (Управляется ползунками) -->
-            <img id="img-eye" src="experimentEyeOpen.png" style="z-index:11;">
+            <img id="img-tail" src="experimentTail.png">
+            <img id="img-thigh" src="experimentThigh.png">
+            <img id="img-crus" src="experimentCrus.png">
+            <img id="img-foot" src="experimentFoot.png">
+            <img id="img-downtorso" src="experimentDownTorso.png">
+            <img id="img-uptorso" src="experimentUpTorso.png">
+            <img id="img-uparm" src="experimentUpArm.png">
+            <img id="img-downarm" src="experimentDownArm.png">
+            <img id="img-handb" src="experimentHandB.png">
+            <img id="img-handf" src="experimentHandF.png">
+            <img id="img-head" src="experimentHead.png">
+            <img id="img-eye" src="experimentEyeOpen.png">
         </div>
-
-        <!-- ПАНЕЛЬ УПРАВЛЕНИЯ ПОЛЗУНКАМИ -->
         <div class="character-status">
-            <h3>Мониторинг и настройка:</h3>
-            
+            <h3>Мониторинг систем:</h3>
+            <p>Голова: <span id="hp-head">100</span>/100</p>
+            <p>Верхний Торс: <span id="hp-uptorso">120</span>/120</p>
+            <p>Нижний Торс: <span id="hp-downtorso">100</span>/100</p>
+            <p>Голень: <span id="hp-crus">60</span>/60 <span id="lbl-crus"></span></p>
+            <p>Хвост: <span id="hp-tail">40</span>/40</p>
+            <hr>
+            <p>Кровотечение: <span id="bleed-status">НЕТ</span></p>
+            <p>Состояние Чипа: <span id="sanity-status">СТАБИЛЬНО</span></p>
             <div class="slider-panel">
-                <h4 style="margin:0 0 10px 0; color:#66fcf1; text-align:center;">НАСТРОЙКА ГЛАЗА (1%-100%):</h4>
-                
+                <h4 style="margin:0 0 10px 0; color:#66fcf1; text-align:center;">ТОЧНАЯ НАСТРОЙКА ГЛАЗА:</h4>
                 <div class="slider-group">
                     <label>Ось X:</label>
-                    <input type="range" id="slide-x" min="1" max="100" value="51" oninput="moveEye()">
-                    <span id="val-x" class="slider-value">51%</span>
+                    <input type="range" id="slide-x" min="1" max="100" value="26" oninput="moveEye()">
+                    <span id="val-x" class="slider-value">26%</span>
                 </div>
-                
                 <div class="slider-group">
                     <label>Ось Y:</label>
-                    <input type="range" id="slide-y" min="1" max="100" value="11" oninput="moveEye()">
-                    <span id="val-y" class="slider-value">11%</span>
+                    <input type="range" id="slide-y" min="1" max="100" value="2" oninput="moveEye()">
+                    <span id="val-y" class="slider-value">2%</span>
                 </div>
-                
                 <div class="slider-group">
                     <label>Размер:</label>
-                    <input type="range" id="slide-size" min="1" max="100" value="15" oninput="moveEye()">
-                    <span id="val-size" class="slider-value">15%</span>
+                    <input type="range" id="slide-size" min="1" max="100" value="58" oninput="moveEye()">
+                    <span id="val-size" class="slider-value">58%</span>
                 </div>
             </div>
-            
-            <p style="font-size:11px; margin-top:15px; color:#888; text-align:center;">Выровняй глаз ползунками и пришли получившиеся проценты!</p>
+        </div>
+        <div class="controls">
+            <h3>Симуляция атак:</h3>
+            <button onclick="dealDamage('head', 35)">Удар в лицо (-35 HP)</button>
+            <button onclick="dealDamage('head', 40)">Укус в голову (-40 HP)</button>
+            <button onclick="dealDamage('crus', 45)">Удар в голень (-45 HP)</button>
+            <button onclick="dealDamage('tail', 40)">Откусить хвост (-40 HP)</button>
+            <hr>
+            <button class="heal" onclick="heal('head', 100)">Хирургический Набор</button>
+            <button class="heal" onclick="heal('crus', 60)">Медицинская шина</button>
         </div>
     </div>
-
     <script>
+        const Experiment = {
+            isAlive: true,
+            bodyParts: {
+                head: { hp: 100, maxHp: 100, sprite: "experimentHead.png", isBleeding: false },
+                eye: { sprite: "experimentEyeOpen.png" },
+                uptorso: { hp: 120, maxHp: 120 }, downtorso: { hp: 100, maxHp: 100 },
+                crus: { hp: 60, maxHp: 60, isBroken: false }, tail: { hp: 40, maxHp: 40 }
+            },
+            receiveDamage: function(partName, damage) {
+                if (!this.isAlive) return;
+                let part = this.bodyParts[partName]; if (!part) return;
+                part.hp -= damage; if (part.hp < 0) part.hp = 0;
+                if (partName === "head") {
+                    if (this.bodyParts.head.hp <= 0) { this.isAlive = false; this.bodyParts.head.sprite = "experimentHeadDisfigured3.png"; this.bodyParts.eye.sprite = "experimentEyePanic.png"; }
+                    else if (this.bodyParts.head.hp < 35) { this.bodyParts.head.sprite = "experimentHeadDisfigured2.png"; this.bodyParts.eye.sprite = "experimentEyePanic.png"; this.bodyParts.head.isBleeding = true; }
+                    else if (this.bodyParts.head.hp < 70) { this.bodyParts.head.sprite = "experimentHeadDisfigured1.png"; this.bodyParts.eye.sprite = "experimentEyeSad.png"; }
+                }
+                if (partName === "crus" && part.hp < 20) { part.isBroken = true; part.isBleeding = true; }
+                if (partName === "tail" && part.hp <= 0) part.isBleeding = true;
+            },
+            healPart: function(partName, amount) {
+                if (!this.isAlive) return;
+                let part = this.bodyParts[partName]; if (!part) return;
+                part.hp += amount; if (part.hp > part.maxHp) part.hp = part.maxHp; part.isBleeding = false;
+                if (partName === "head" && part.hp >= 100) { this.bodyParts.head.sprite = "experimentHead.png"; this.bodyParts.eye.sprite = "experimentEyeOpen.png"; }
+                if (partName === "crus") part.isBroken = false;
+            }
+        };
         function moveEye() {
-            // Читаем проценты из ползунков
             let pctX = document.getElementById("slide-x").value;
             let pctY = document.getElementById("slide-y").value;
             let pctSize = document.getElementById("slide-size").value;
-
-            // Обновляем текст процентов на экране
             document.getElementById("val-x").innerText = pctX + "%";
             document.getElementById("val-y").innerText = pctY + "%";
             document.getElementById("val-size").innerText = pctSize + "%";
-
-            // Переводим проценты в пиксели относительно окна 320x480
-            let targetLeft = (pctX / 100) * 320;
-            let targetTop = (pctY / 100) * 480;
-            let targetSize = (pctSize / 100) * 320; // масштаб от ширины контейнера
-
-            // Применяем позицию к глазу
             let eye = document.getElementById("img-eye");
-            eye.style.left = targetLeft + "px";
-            eye.style.top = targetTop + "px";
-            eye.style.width = targetSize + "px";
-            eye.style.height = targetSize + "px";
+            eye.style.left = ((pctX / 100) * 320) + "px";
+            eye.style.top = ((pctY / 100) * 480) + "px";
+            eye.style.width = ((pctSize / 100) * 320) + "px";
+            eye.style.height = ((pctSize / 100) * 320) + "px";
         }
-
-        // Запуск выравнивания при старте страницы
-        moveEye();
+        function updateUI() {
+            document.getElementById("hp-head").innerText = Experiment.bodyParts.head.hp;
+            document.getElementById("hp-uptorso").innerText = Experiment.bodyParts.uptorso.hp;
+            document.getElementById("hp-downtorso").innerText = Experiment.bodyParts.downtorso.hp;
+            document.getElementById("hp-crus").innerText = Experiment.bodyParts.crus.hp;
+            document.getElementById("hp-tail").innerText = Experiment.bodyParts.tail.hp;
+            document.getElementById("img-head").src = Experiment.bodyParts.head.sprite;
+            document.getElementById("img-eye").src = Experiment.bodyParts.eye.sprite;
+            document.getElementById("lbl-crus").innerText = Experiment.bodyParts.crus.isBroken ? "(ПЕРЕЛОМ)" : "";
+            document.getElementById("lbl-crus").className = Experiment.bodyParts.crus.isBroken ? "status-crit" : "";
+            let bleeding = Experiment.bodyParts.head.isBleeding || Experiment.bodyParts.crus.isBleeding || Experiment.bodyParts.tail.isBleeding;
+            let bleedLabel = document.getElementById("bleed-status");
+            bleedLabel.innerText = bleeding ? "АКТИВНО" : "НЕТ";
+            bleedLabel.className = bleeding ? "status-crit" : "status-ok";
+            let sanityLabel = document.getElementById("sanity-status");
+            if (Experiment.bodyParts.head.hp < 35 && Experiment.isAlive) { sanityLabel.innerText = "ЧИП КОРОТИТ (ГЛЮКИ)"; sanityLabel.className = "status-warn"; }
+            else if (!Experiment.isAlive) { sanityLabel.innerText = "СВЯЗЬ ПОТЕРЯНА"; sanityLabel.className = "status-crit"; }
+            else { sanityLabel.innerText = "СТАБИЛЬНО"; sanityLabel.className = "status-ok"; }
+            let globalStatus = document.getElementById("global-status");
+            if (!Experiment.isAlive) { globalStatus.innerText = "ЭКСПЕРИМЕНТ УНИЧТОЖЕН"; globalStatus.className = "status-crit"; }
+            else if (bleeding) { globalStatus.innerText = "КРИТИЧЕСКОЕ СОСТОЯНИЕ: ПОТЕРЯ КРОВИ"; globalStatus.className = "status-warn"; }
+            else { globalStatus.innerText = "ПОДОПЫТНЫЙ СТАБИЛЕН"; globalStatus.className = "status-ok"; }
+            moveEye();
+        }
+        function dealDamage(part, amount) { Experiment.receiveDamage(part, amount); updateUI(); }
+        function heal(part, amount) { Experiment.healPart(part, amount); updateUI(); }
+        updateUI();
     </script>
 </body>
 </html>
