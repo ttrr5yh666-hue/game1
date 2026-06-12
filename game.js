@@ -79,20 +79,20 @@ function updateUI() {
 
     document.getElementById("img-head").src = Experiment.bodyParts.head.sprite;
     
-    // Применение динамических координат глаза
+    // ПРИМЕНЕНИЕ НАСТРОЕК С ПУЛЬТА ЧЕРЕЗ STYLE
     let eyeImg = document.getElementById("img-eye");
     eyeImg.src = Experiment.bodyParts.eye.sprite;
-    eyeImg.style.position = "absolute";
-    eyeImg.style.transform = "none";
-    eyeImg.style.top = eyeTop + "px";       
-    eyeImg.style.left = eyeLeft + "px";     
-    eyeImg.style.width = eyeSize + "px";    
-    eyeImg.style.height = eyeSize + "px";
-    eyeImg.style.zIndex = "11";
-    eyeImg.style.objectFit = "contain";
-    eyeImg.style.imageRendering = "pixelated";
+    eyeImg.style.setProperty("position", "absolute", "important");
+    eyeImg.style.setProperty("transform", "none", "important");
+    eyeImg.style.setProperty("top", eyeTop + "px", "important");       
+    eyeImg.style.setProperty("left", eyeLeft + "px", "important");     
+    eyeImg.style.setProperty("width", eyeSize + "px", "important");    
+    eyeImg.style.setProperty("height", eyeSize + "px", "important");
+    eyeImg.style.setProperty("z-index", "11", "important");
+    eyeImg.style.setProperty("object-fit", "contain", "important");
+    eyeImg.style.setProperty("image-rendering", "pixelated", "important");
 
-    // Обновление текстовой инфо-панели координат
+    // Обновление цифр под кнопками пульта
     document.getElementById("eye-coords").innerText = `Координаты: top: ${eyeTop}, left: ${eyeLeft}, size: ${eyeSize}`;
 
     document.getElementById("lbl-crus").innerText = Experiment.bodyParts.crus.isBroken ? "(ПЕРЕЛОМ)" : "";
@@ -128,7 +128,7 @@ function updateUI() {
     }
 }
 
-// Функция управления с кнопок пульта
+// Функция кнопок тюнера
 function tuneEye(property, change) {
     if (property === 'top') eyeTop += change;
     if (property === 'left') eyeLeft += change;
