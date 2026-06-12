@@ -9,7 +9,6 @@
         .back-btn { display: inline-block; background: #1f2833; color: #66fcf1; padding: 10px 20px; text-decoration: none; border: 1px solid #45f3ff; border-radius: 4px; margin-bottom: 20px; }
         .game-container { display: flex; justify-content: center; gap: 30px; margin-top: 20px; flex-wrap: wrap; }
         
-        /* Главное окно куклы персонажа */
         .character-viewport { 
             position: relative; 
             width: 320px; 
@@ -20,7 +19,6 @@
             overflow: hidden;
         }
         
-        /* Базовые стили для позиционирования каждого спрайта */
         .body-part-layer { 
             position: absolute; 
             left: 50%; 
@@ -29,13 +27,13 @@
             image-rendering: pixelated;
         }
 
-        /* КООРДИНАТЫ ШАГ 2: Увеличиваем хвост и собираем руки */
+        /* КООРДИНАТЫ ШАГ 3: Двигаем хвост ближе и поднимаем лапы */
         #img-foot { bottom: 10px; width: 80px; height: 40px; z-index: 1; }
         #img-crus { bottom: 45px; width: 70px; height: 60px; z-index: 2; }
         #img-thigh { bottom: 100px; width: 85px; height: 70px; z-index: 3; }
         
-        /* ХВОСТ: Сделал намного больше, поднял к бедрам и сдвинул влево */
-        #img-tail { bottom: 115px; left: 24%; width: 140px; height: 140px; z-index: 1; }
+        /* ХВОСТ: Сделал больше и сдвинул вплотную к телу справа (left: 36%) */
+        #img-tail { bottom: 130px; left: 36%; width: 160px; height: 160px; z-index: 1; }
 
         #img-downtorso { bottom: 160px; width: 110px; height: 80px; z-index: 4; }
         #img-uptorso { bottom: 200px; width: 140px; height: 110px; z-index: 5; }
@@ -43,11 +41,10 @@
         #img-uparm { bottom: 245px; width: 140px; height: 80px; z-index: 4; }
         #img-downarm { bottom: 200px; width: 130px; height: 70px; z-index: 6; }
         
-        /* ЛАПЫ/КИСТИ: Сделал больше и сдвинул ближе к торсу */
-        #img-handb { bottom: 185px; left: 39%; width: 55px; height: 55px; z-index: 3; }
-        #img-handf { bottom: 180px; left: 61%; width: 55px; height: 55px; z-index: 7; }
+        /* ЛАПЫ/КИСТИ: Сделал еще больше, поднял выше и прижал к торсу */
+        #img-handb { bottom: 215px; left: 42%; width: 65px; height: 65px; z-index: 3; }
+        #img-handf { bottom: 210px; left: 58%; width: 65px; height: 65px; z-index: 7; }
 
-        /* ГОЛОВА И ГЛАЗ (Идеально сели в прошлом шаге) */
         #img-head { bottom: 260px; width: 150px; height: 150px; z-index: 10; }
         #img-eye { bottom: 300px; width: 45px; height: 45px; z-index: 11; }
 
