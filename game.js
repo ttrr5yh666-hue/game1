@@ -1,3 +1,8 @@
+// Текущие настраиваемые координаты глаза
+let eyeTop = 47;
+let eyeLeft = 142;
+let eyeSize = 48;
+
 const Experiment = {
     isAlive: true,
     bodyParts: {
@@ -74,18 +79,21 @@ function updateUI() {
 
     document.getElementById("img-head").src = Experiment.bodyParts.head.sprite;
     
-    // НАСТРОЙКА НОВОГО УМЕНЬШЕННОГО ГЛАЗА В JS
+    // Применение динамических координат глаза
     let eyeImg = document.getElementById("img-eye");
     eyeImg.src = Experiment.bodyParts.eye.sprite;
     eyeImg.style.position = "absolute";
     eyeImg.style.transform = "none";
-    eyeImg.style.top = "47px";       
-    eyeImg.style.left = "142px";     
-    eyeImg.style.width = "48px";    
-    eyeImg.style.height = "48px";
+    eyeImg.style.top = eyeTop + "px";       
+    eyeImg.style.left = eyeLeft + "px";     
+    eyeImg.style.width = eyeSize + "px";    
+    eyeImg.style.height = eyeSize + "px";
     eyeImg.style.zIndex = "11";
     eyeImg.style.objectFit = "contain";
     eyeImg.style.imageRendering = "pixelated";
+
+    // Обновление текстовой инфо-панели координат
+    document.getElementById("eye-coords").innerText = `Координаты: top: ${eyeTop}, left: ${eyeLeft}, size: ${eyeSize}`;
 
     document.getElementById("lbl-crus").innerText = Experiment.bodyParts.crus.isBroken ? "(ПЕРЕЛОМ)" : "";
     document.getElementById("lbl-crus").className = Experiment.bodyParts.crus.isBroken ? "status-crit" : "";
@@ -118,6 +126,14 @@ function updateUI() {
         globalStatus.innerText = "ПОДОПЫТНЫЙ СТАБИЛЕН";
         globalStatus.className = "status-ok";
     }
+}
+
+// Функция управления с кнопок пульта
+function tuneEye(property, change) {
+    if (property === 'top') eyeTop += change;
+    if (property === 'left') eyeLeft += change;
+    if (property === 'size') eyeSize += change;
+    updateUI();
 }
 
 function dealDamage(part, amount) {
