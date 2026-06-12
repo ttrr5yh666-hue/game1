@@ -22,7 +22,7 @@
     <h2 id="global-status" class="status-ok">ПОДОПЫТНЫЙ СТАБИЛЕН</h2>
     
     <div class="game-container">
-        <!-- КУКЛА ПЕРСОНАЖА С УВЕЛИЧЕННЫМ ГЛАЗОМ И ПОДНЯТОЙ ГОЛОВОЙ -->
+        <!-- КУКЛА С УВЕЛИЧЕННОЙ ГОЛОВОЙ И СДВИГНУТЫМ ГЛАЗОМ -->
         <div class="character-viewport">
             <img id="img-tail" src="experimentTail.png" alt="Tail" style="position:absolute;transform:none;top:180px;left:20px;width:160px;height:160px;z-index:1;object-fit:contain;image-rendering:pixelated;">
             <img id="img-thigh" src="experimentThigh.png" alt="Thigh" style="position:absolute;transform:none;top:260px;left:110px;width:105px;height:95px;z-index:3;object-fit:contain;image-rendering:pixelated;">
@@ -35,10 +35,10 @@
             <img id="img-handb" src="experimentHandB.png" alt="HandB" style="position:absolute;transform:none;top:240px;left:100px;width:55px;height:55px;z-index:3;object-fit:contain;image-rendering:pixelated;">
             <img id="img-handf" src="experimentHandF.png" alt="HandF" style="position:absolute;transform:none;top:235px;left:160px;width:55px;height:55px;z-index:7;object-fit:contain;image-rendering:pixelated;">
             
-            <!-- ВЕРНУЛИ ГОЛОВУ НА ПРЕЖНЕЕ МЕСТО (top: 25px) -->
-            <img id="img-head" src="experimentHead.png" alt="Head" style="position:absolute;transform:none;top:25px;left:100px;width:150px;height:150px;z-index:10;object-fit:contain;image-rendering:pixelated;">
-            <!-- ГЛАЗ: УВЕЛИЧЕН В 3.5 РАЗА И ПОДГОНЕН ТОЧНО ПОД ЛИЦО -->
-            <img id="img-eye" src="experimentEyeOpen.png" alt="Eye" style="position:absolute;transform:none;top:60px;left:168px;width:145px;height:145px;z-index:11;object-fit:contain;image-rendering:pixelated;">
+            <!-- ГОЛОВА: Увеличена в 1.5 раза (было 150px, стало 225px), немного смещена left для компенсации масштаба -->
+            <img id="img-head" src="experimentHead.png" alt="Head" style="position:absolute;transform:none;top:5px;left:63px;width:225px;height:225px;z-index:10;object-fit:contain;image-rendering:pixelated;">
+            <!-- ГЛАЗ: Тоже увеличен пропорционально голове, поднят на 5px вверх (top: 55px) и сдвинут на 15px влево (left: 153px) -->
+            <img id="img-eye" src="experimentEyeOpen.png" alt="Eye" style="position:absolute;transform:none;top:55px;left:153px;width:215px;height:215px;z-index:11;object-fit:contain;image-rendering:pixelated;">
         </div>
 
         <div class="character-status">
