@@ -2,7 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Casualties: Unknown - Монитор Эксперимента</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCAV: Прототип Expie</title>
     <style>
         body { 
             background-color: #121212; 
@@ -12,38 +13,48 @@
             text-align: center; 
         }
         
+        .back-btn {
+            display: inline-block;
+            background-color: #333;
+            color: #fff;
+            padding: 10px 20px;
+            text-decoration: none;
+            font-weight: bold;
+            border: 1px solid #555;
+            margin-bottom: 20px;
+        }
+        .back-btn:hover { background-color: #444; }
+
         .game-container { 
             display: flex; 
             justify-content: center; 
+            align-items: flex-start;
             gap: 40px; 
             margin-top: 20px; 
         }
         
-        /* Окно вывода графики Эксперимента */
         .character-viewport { 
             position: relative; 
-            width: 250px; 
-            height: 300px; 
+            width: 300px; 
+            height: 400px; 
             background: #1a1a1a; 
             border: 2px solid #333;
-            overflow: hidden;
         }
         
-        /* Абсолютное позиционирование, чтобы картинки ложились ровно друг на друга */
         .body-part-layer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Сохраняет пропорции спрайтов */
+            object-fit: contain;
         }
 
         .character-status { 
             border: 2px solid #333; 
             padding: 20px; 
             background: #1a1a1a; 
-            width: 300px; 
+            width: 320px; 
             text-align: left; 
         }
         
@@ -67,9 +78,7 @@
             background: #14cf43; 
         }
         
-        button:hover { 
-            opacity: 0.8; 
-        }
+        button:hover { opacity: 0.8; }
         
         .status-ok { color: #14cf43; }
         .status-warn { color: #ff9900; }
@@ -78,141 +87,57 @@
 </head>
 <body>
 
+    <a href="index.html" class="back-btn">⬅ НА ГЛАВНУЮ СТРАНИЦУ</a>
+
     <h1>СИСТЕМА ЖИЗНЕОБЕСПЕЧЕНИЯ ЭКСПЕРИМЕНТА</h1>
     <h2 id="global-status" class="status-ok">ПОДОПЫТНЫЙ СТАБИЛЕН</h2>
 
     <div class="game-container">
         
-        <!-- КУКЛА ПЕРСОНАЖА (СЛОИ КАРТИНОК) -->
+        <!-- КУКЛА ПЕРСОНАЖА -->
         <div class="character-viewport">
-            <!-- Нижний слой: Торс -->
-            <img id="img-uptorso" class="body-part-layer" src="experimentUpTorso.png" alt="Torso">
-            <!-- Средний слой: Голова (ложится поверх торса) -->
+            <img id="img-tail" class="body-part-layer" src="experimentTail.png" alt="Tail">
+            <img id="img-thigh" class="body-part-layer" src="experimentThigh.png" alt="Thigh">
+            <img id="img-crus" class="body-part-layer" src="experimentCrus.png" alt="Crus">
+            <img id="img-foot" class="body-part-layer" src="experimentFoot.png" alt="Foot">
+            <img id="img-downtorso" class="body-part-layer" src="experimentDownTorso.png" alt="DownTorso">
+            <img id="img-uptorso" class="body-part-layer" src="experimentUpTorso.png" alt="UpTorso">
+            <img id="img-uparm" class="body-part-layer" src="experimentUpArm.png" alt="UpArm">
+            <img id="img-downarm" class="body-part-layer" src="experimentDownArm.png" alt="DownArm">
+            <img id="img-handb" class="body-part-layer" src="experimentHandB.png" alt="HandB">
+            <img id="img-handf" class="body-part-layer" src="experimentHandF.png" alt="HandF">
             <img id="img-head" class="body-part-layer" src="experimentHead.png" alt="Head">
-            <!-- Верхний слой: Глаза (ложатся на лицо) -->
             <img id="img-eye" class="body-part-layer" src="experimentEyeOpen.png" alt="Eye">
         </div>
 
-        <!-- Окно состояния -->
+        <!-- МОНИТОРИНГ ЗДОРОВЬЯ -->
         <div class="character-status">
-            <h3>Состояние систем:</h3>
-            <p>Голова (HP): <span id="hp-head">100</span>/100</p>
-            <p>Верхний Торс (HP): <span id="hp-uptorso">120</span>/120</p>
+            <h3>Мониторинг систем:</h3>
+            <p>Голова: <span id="hp-head">100</span>/100</p>
+            <p>Верхний Торс: <span id="hp-uptorso">120</span>/120</p>
+            <p>Нижний Торс: <span id="hp-downtorso">100</span>/100</p>
+            <p>Голень (Нога): <span id="hp-crus">60</span>/60 <span id="lbl-crus"></span></p>
+            <p>Хвост: <span id="hp-tail">40</span>/40</p>
             <hr>
             <p>Кровотечение: <span id="bleed-status">НЕТ</span></p>
-            <p>Психика (Чип): <span id="sanity-status">100%</span></p>
+            <p>Состояние Чипа: <span id="sanity-status">СТАБИЛЬНО</span></p>
         </div>
 
-        <!-- Кнопки теста механик -->
+        <!-- КНОПКИ ДЛЯ СИМУЛЯЦИИ -->
         <div class="controls">
-            <h3>Тест повреждений:</h3>
-            <button onclick="dealDamage('head', 35)">Удар в Голову (-35 HP)</button>
-            <button onclick="dealDamage('head', 40)">Тяжелый удар в лицо (-40 HP)</button>
-            <button onclick="dealDamage('uptorso', 40)">Выстрел в Торс (-40 HP)</button>
+            <h3>Симуляция атак мутантов:</h3>
+            <button onclick="dealDamage('head', 35)">Удар лапой в лицо (-35 HP)</button>
+            <button onclick="dealDamage('head', 40)">Критический укус в голову (-40 HP)</button>
+            <button onclick="dealDamage('crus', 45)">Попадание в голень (-45 HP)</button>
+            <button onclick="dealDamage('tail', 40)">Откусить хвост (-40 HP)</button>
             <hr>
-            <h3>Медицина:</h3>
-            <button class="heal" onclick="heal('head', 100)">Вылечить Голову</button>
+            <h3>Медицинские протоколы:</h3>
+            <button class="heal" onclick="heal('head', 100)">Применить Хирургический Набор</button>
+            <button class="heal" onclick="heal('crus', 60)">Наложить медицинскую шину</button>
         </div>
     </div>
 
-    <!-- ВЕСЬ НАШ КОД И ЛОГИКА ИГРЫ -->
-    <script>
-        // Объект нашего Эксперимента с твоими спрайтами
-        const Experiment = {
-            isAlive: true,
-            sanity: 100,
-            bodyParts: {
-                head: { hp: 100, maxHp: 100, sprite: "experimentHead.png", isBleeding: false },
-                eye: { sprite: "experimentEyeOpen.png" },
-                uptorso: { hp: 120, maxHp: 120, sprite: "experimentUpTorso.png", isBleeding: false }
-            },
-
-            // Логика получения урона
-            receiveDamage: function(partName, damage) {
-                if (!this.isAlive) return;
-                let part = this.bodyParts[partName];
-                if (!part) return;
-
-                part.hp -= damage;
-                if (part.hp < 0) part.hp = 0;
-
-                // Переключение спрайтов головы на основе твоих файлов "Disfigured"
-                if (partName === "head") {
-                    if (this.bodyParts.head.hp <= 0) {
-                        this.isAlive = false;
-                        this.bodyParts.head.sprite = "experimentHeadDisfigured3.png";
-                        this.bodyParts.eye.sprite = "experimentEyePanic.png";
-                    } else if (this.bodyParts.head.hp < 35) {
-                        this.bodyParts.head.sprite = "experimentHeadDisfigured2.png";
-                        this.bodyParts.eye.sprite = "experimentEyePanic.png";
-                        this.bodyParts.head.isBleeding = true;
-                    } else if (this.bodyParts.head.hp < 70) {
-                        this.bodyParts.head.sprite = "experimentHeadDisfigured1.png";
-                        this.bodyParts.eye.sprite = "experimentEyeSad.png";
-                    }
-                }
-            },
-
-            // Логика лечения
-            healPart: function(partName, amount) {
-                if (!this.isAlive) return;
-                let part = this.bodyParts[partName];
-                if (!part) return;
-
-                part.hp += amount;
-                if (part.hp > part.maxHp) part.hp = part.maxHp;
-                part.isBleeding = false;
-
-                if (partName === "head" && part.hp >= 100) {
-                    part.sprite = "experimentHead.png";
-                    this.bodyParts.eye.sprite = "experimentEyeOpen.png";
-                }
-            }
-        };
-
-        // Функция обновления интерфейса и картинок в браузере
-        function updateUI() {
-            document.getElementById("hp-head").innerText = Experiment.bodyParts.head.hp;
-            document.getElementById("hp-uptorso").innerText = Experiment.bodyParts.uptorso.hp;
-
-            // Меняем картинки на экране
-            document.getElementById("img-head").src = Experiment.bodyParts.head.sprite;
-            document.getElementById("img-eye").src = Experiment.bodyParts.eye.sprite;
-            document.getElementById("img-uptorso").src = Experiment.bodyParts.uptorso.sprite;
-
-            // Статус кровотечения
-            let bleeding = Experiment.bodyParts.head.isBleeding;
-            let bleedLabel = document.getElementById("bleed-status");
-            bleedLabel.innerText = bleeding ? "КРИТИЧЕСКОЕ" : "НЕТ";
-            bleedLabel.className = bleeding ? "status-crit" : "status-ok";
-
-            // Главный статус жизни подопытного
-            let globalStatus = document.getElementById("global-status");
-            if (!Experiment.isAlive) {
-                globalStatus.innerText = "ЭКСПЕРИМЕНТ УНИЧТОЖЕН (СМЕРТЬ МОЗГА)";
-                globalStatus.className = "status-crit";
-            } else if (bleeding) {
-                globalStatus.innerText = "ВНИМАНИЕ: УГРОЗА ПОТЕРИ КРОВИ";
-                globalStatus.className = "status-warn";
-            } else {
-                globalStatus.innerText = "ПОДОПЫТНЫЙ СТАБИЛЕН";
-                globalStatus.className = "status-ok";
-            }
-        }
-
-        // Функции для кнопок
-        function dealDamage(part, amount) {
-            Experiment.receiveDamage(part, amount);
-            updateUI();
-        }
-
-        function heal(part, amount) {
-            Experiment.healPart(part, amount);
-            updateUI();
-        }
-
-        // Запуск при открытии страницы
-        updateUI();
-    </script>
+    <!-- ПОДКЛЮЧАЕМ СКРИПТ ЛОГИКИ -->
+    <script src="game.js"></script>
 </body>
 </html>
